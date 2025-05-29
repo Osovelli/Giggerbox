@@ -1,4 +1,4 @@
-import { MoreVertical, Trash2 } from "lucide-react"
+import { EyeIcon, MoreVertical, Trash2 } from "lucide-react"
 
 export const Table = ({
   data = [],
@@ -75,7 +75,8 @@ export const Table = ({
                       onClick={() => onRowClick?.(item)}
                       className="text-primary hover:text-primary/90 flex items-center justify-center bg-white"
                     >
-                      <MoreVertical className="h-4 w-4" />
+                      {/* <MoreVertical className="h-4 w-4" /> */}
+                      <EyeIcon className="h-4 w-4" />
                     </button>
                     {showDelete && (
                       <button

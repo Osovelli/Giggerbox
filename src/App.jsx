@@ -103,19 +103,20 @@ function App() {
           <Route path="post-gig" element={<PostGigPage />} />
           <Route path="case" element={<MyCasePage />} />
           <Route path="gigs/:id/offers" element={<GigOffersPage />} />
-          {/* Add other dashboard routes here */}
-            <Route path="/dashboard/account" element={<AccountLayout />}>
-              <Route index element={<EditProfile />} />
-              <Route path="work-samples" element={<WorkSamples />} />
-              <Route path="notification" element={<Notification />} />
-              <Route path="change-password" element={<ChangePassword />} />
-              <Route path="help-center" element={<HelpCenter />} />
-              <Route path="terms" element={<Terms />} />
-              <Route path="privacy" element={<Privacy />} />
-              {/* Add other account routes as needed */}
-            </Route>
+          {/* Account sub routes*/}
+          <Route path="/dashboard/account" element={<AccountLayout />}>
+            <Route index element={<EditProfile />} />
+            <Route path="work-samples" element={<WorkSamples />} />
+            <Route path="notification" element={<Notification />} />
+            <Route path="change-password" element={<ChangePassword />} />
+            <Route path="help-center" element={<HelpCenter />} />
+            <Route path="terms" element={<Terms />} />
+            <Route path="privacy" element={<Privacy />} />
+            {/* Add other account routes as needed */}
           </Route>
+        </Route>
         <Route path="gigs/:id" element={<GigDetails />} />
+        {/*  dashboard wallet route */}
         <Route path="/dashboard/wallet" element={<Wallet />} />
          {/* Messages and Calls */}
          <Route path="/messages/:id?" element={<DashboardLayout />}>
@@ -130,56 +131,3 @@ function App() {
 }
 
 export default App
-
-// Compare this snippet from src/pages/Home.jsx:
-
-/* import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
-import CustomButton from './components/CustomButton'
-import { Rocket } from 'lucide-react'
-
-function App() {
-  const [count, setCount] = useState(0)
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleClick = () => {
-    setIsLoading(true);
-    setCount((count) => count + 1)
-    // Simulate async action
-    setTimeout(() => setIsLoading(false), 2000);
-  };
-
-  return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <CustomButton 
-        onClick={handleClick}
-        variant="outline"
-        icon={<Rocket className="h-4 w-4" />}
-        isLoading={isLoading}
-        >
-          count is {count}
-        </CustomButton>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
-
-export default App */

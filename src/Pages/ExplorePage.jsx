@@ -276,7 +276,7 @@ function ExplorePage() {
                   />
                 </div>
                 {/* Content based on active tab */}
-                <TabsContent value="gigs" className="mt-0">
+                <TabsContent value="gigs" className="mt-2">
                 <div className="space-y-6">
                     {gigsData.map((gig) => (
                     <div key={gig.id} className="border rounded-lg p-6 hover:shadow-md transition-shadow">

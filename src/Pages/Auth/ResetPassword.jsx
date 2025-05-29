@@ -40,7 +40,7 @@ function ResetPassword() {
 
   return (
     <AuthLayout>
-      {/* <div className="bg-white rounded-xl p-8 shadow-sm">
+      <div className="bg-white rounded-xl p-8 shadow-sm">
         <div className="mb-8">
           <h1 className="text-2xl font-semibold mb-2">Reset Your Password</h1>
           <p className="text-muted-foreground">Enter your email to receive a reset link.</p>
@@ -64,7 +64,7 @@ function ResetPassword() {
             Send Reset Link
           </CustomButton>
         </form>
-      </div> */}
+      </div>
       <ResetPasswordModal isOpen={isModalOpen} onClose={handleModalClose} />
     </AuthLayout>
   )

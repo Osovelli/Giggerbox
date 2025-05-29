@@ -2,6 +2,9 @@ import { Link } from "react-router-dom"
 import { Logo } from "../Icons/Logo"
 
 function AuthLayout({ children }) {
+  const location = window.location.pathname
+  const isAuthPage = location.startsWith("/signin") || location.startsWith("/signup")
+
   return (
     <div className="min-h-screen bg-[#F9FAFB]">
       {/* Auth Header */}
@@ -14,10 +17,17 @@ function AuthLayout({ children }) {
               </span>
             </Link>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Already have an account?</span>
-              <Link to="/signin" className="text-sm font-medium">
-                Login
-              </Link>
+              {
+                location.startsWith("/signup") && 
+                (
+                  <>
+                    <span className="text-sm text-muted-foreground">Already have an account?</span>
+                    <Link to="/signin" className="text-sm font-medium">
+                      Login
+                    </Link>
+                  </>
+                )
+              }
             </div>
           </div>
         </div>
