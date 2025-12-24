@@ -11,6 +11,7 @@ import GigSuccessModal from "@/components/Modals.jsx/postGig/GigSuccessModal"
 import GigErrorModal from "@/components/Modals.jsx/postGig/GigErrorModal"
 import SkillBadge from "@/components/Gigs/SkillBadge"
 import CustomButton from "@/components/CustomButton"
+import useGigStore from "@/store/gigStore"
 
 // Sample skills for demonstration
 const availableSkills = [
@@ -25,6 +26,7 @@ const availableSkills = [
 ]
 
 function PostGigPage() {
+  const { postGig, loading, error } = useGigStore()
   const navigate = useNavigate()
   const [formData, setFormData] = useState({
     title: "",
@@ -41,6 +43,8 @@ function PostGigPage() {
     "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Unsuccessful-Yb4jaONGz7KaGAeRCZmz52LaImJAp8.png",
     "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Playground%20%2819%29-HSrCcFl4u1zMm15lqTD9hyAWgZqlFf.png",
   ])
+  // New: separate attachments state (documents or pictures) to be sent to API
+  const [uploadedDocuments, setUploadedDocuments] = useState([])
   const [errors, setErrors] = useState({})
 
   // Modals state
@@ -79,8 +83,27 @@ function PostGigPage() {
     }
   }
 
+  // New: handle document or picture attachments (kept separate from uploadedImages)
+  const handleDocumentUpload = (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const newDocs = Array.from(e.target.files).map((file) => ({
+        id: `${file.name}-${Date.now()}`,
+        name: file.name,
+        file,
+        preview: file.type.startsWith("image/") ? URL.createObjectURL(file) : null,
+        url: null,
+      }))
+      setUploadedDocuments((prev) => [...prev, ...newDocs].slice(0, 10)) // limit to 10 attachments
+    }
+  }
+
   const removeImage = (index) => {
     setUploadedImages((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  // New: remove document by id
+  const removeDocument = (id) => {
+    setUploadedDocuments((prev) => prev.filter((d) => d.id !== id))
   }
 
   const validateForm = () => {
@@ -104,8 +127,11 @@ function PostGigPage() {
 
     if (!formData.budget) {
       newErrors.budget = "Budget is required"
-    } else if (isNaN(Number(formData.budget)) || Number(formData.budget) <= 0) {
-      newErrors.budget = "Budget must be a positive number"
+    } else {
+      const numericBudget = Number(String(formData.budget).replace(/[^0-9.]/g, ""))
+      /* if (isNaN(numericBudget) || numericBudget <= 0) {
+        newErrors.budget = "Budget must be a positive number"
+      } */
     }
 
     if (selectedSkills.length === 0) {
@@ -129,30 +155,78 @@ function PostGigPage() {
     }
   }
 
-  const handleSubmitGig = () => {
+  // Call postGig from the store with the required payload
+  const handleSubmitGig = async () => {
     setShowPreview(false)
 
-    // Simulate API call
-    setTimeout(() => {
-      // Randomly show success or error for demonstration
-      const hasEnoughBalance = Math.random() > 0.3
+    // Prepare payload according to required shape
+    const requiredSkills = selectedSkills
+      .map((id) => availableSkills.find((s) => s.id === id))
+      .filter(Boolean)
+      .map((s) => s.name)
 
-      if (hasEnoughBalance) {
+    const cleanBudget = Number(String(formData.budget).replace(/[^0-9.]/g, "")) || 0
+    const category = "Design" || requiredSkills[0] || "General" // fallback category
+    const image = uploadedImages.length > 0 ? uploadedImages[0] : ""
+    // Now use uploadedDocuments as attachments (prefer File objects if available)
+    const attachments = uploadedDocuments.map((d) => (d.file ? d.file : d.url || d.preview))
+    const maxHires = 2 // default; adjust if you add UI for it later
+
+    const payload = {
+      title: formData.title,
+      description: formData.description,
+      category,
+      location: formData.location,
+      budget: cleanBudget,
+      maxHires,
+      requiredSkills,
+      image,
+      attachments,
+    }
+
+    try {
+      // postGig should be an async function in your store that returns a result
+      console.log("Submitting gig with payload:", payload)
+      const response = await postGig(
+        {
+      title: formData.title,
+      description: formData.description,
+      category,
+      location: formData.location,
+      budget: cleanBudget,
+      maxHires,
+      requiredSkills,
+      image,
+      attachments,
+    }
+      )
+
+      // Interpret response - adapt to your API response shape
+      // If postGig throws an error, it's handled in catch block below
+      // If it returns a success flag, check it; otherwise assume success when no error thrown
+      const success = response && (response.success === true || response.id || response._id)
+
+      if (success) {
         setShowSuccessModal(true)
       } else {
         setShowErrorModal(true)
       }
-    }, 1000)
+    } catch (err) {
+      // show error modal on failure
+      setShowErrorModal(true)
+      // optionally you could set specific error messages:
+      setErrors({ form: err.message })
+    }
   }
 
   const handleSuccessContinue = () => {
     setShowSuccessModal(false)
-    navigate("/my-creations")
+    navigate("/dashboard/creations")
   }
 
   const handleFundWallet = () => {
     setShowErrorModal(false)
-    navigate("/wallet")
+    navigate("/dashboard/wallet")
   }
 
   const handleRetry = () => {
@@ -333,6 +407,52 @@ function PostGigPage() {
           </div>
         </div>
 
+        {/* New: Attachments (documents or pictures) */}
+        <div className="space-y-4">
+          <div>
+            <Label>Attachments (Document or Picture)</Label>
+            <p className="text-sm text-muted-foreground">
+              Upload PDFs, docs or extra pictures to send with the gig. These will be sent as attachments to the API.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            <label className="border-2 border-dashed rounded-lg aspect-square flex items-center justify-center cursor-pointer hover:border-primary">
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx,image/*"
+                className="hidden"
+                onChange={handleDocumentUpload}
+                multiple
+              />
+              <div className="flex flex-col items-center justify-center text-muted-foreground">
+                <Plus className="h-8 w-8 mb-2" />
+                <span className="text-xs">Add Attachment</span>
+              </div>
+            </label>
+
+            {uploadedDocuments.map((doc) => (
+              <div key={doc.id} className="relative border rounded-lg aspect-square overflow-hidden group flex items-center justify-center p-2">
+                {doc.preview ? (
+                  <img src={doc.preview} alt={doc.name} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-center">
+                    <div className="text-sm font-medium">{doc.name}</div>
+                    <div className="text-xs text-muted-foreground">{doc.name.split(".").pop().toUpperCase()}</div>
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => removeDocument(doc.id)}
+                  className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* Budget */}
         <div className="space-y-2">
           <Label htmlFor="budget">What is your budget for this gig</Label>
@@ -403,18 +523,20 @@ function PostGigPage() {
 
         {/* Form Actions */}
         <div className="flex gap-4 pt-4">
-          <CustomButton 
-          variant="outline" 
-          className="flex-1 rounded-full"
-          size="lg" 
-          onClick={() => navigate(-1)}
+          <CustomButton
+            variant="outline"
+            className="flex-1 rounded-full"
+            size="lg"
+            onClick={() => navigate(-1)}
+            disabled={loading}
           >
             Cancel
           </CustomButton>
-          <CustomButton 
-          className="flex-1 bg-black hover:bg-black/90 rounded-full"
-          size="lg" 
-          onClick={handleContinue}
+          <CustomButton
+            className="flex-1 bg-black hover:bg-black/90 rounded-full"
+            size="lg"
+            onClick={handleContinue}
+            disabled={loading}
           >
             Continue
           </CustomButton>
@@ -448,6 +570,7 @@ function PostGigPage() {
         onClose={() => setShowErrorModal(false)}
         onFundWallet={handleFundWallet}
         onRetry={handleRetry}
+        onError={error}
       />
     </div>
   )

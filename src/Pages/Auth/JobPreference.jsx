@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom"
 import AuthLayout from "@/components/Authentication/AuthLayout"
 import CustomButton from "@/components/CustomButton"
 import CategoryCard from "@/components/Authentication/GigCategoryCard"
+import useUserStore from "@/store/userStore"
 
 const jobCategories = [
   "Graphic Design",

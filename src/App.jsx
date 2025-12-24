@@ -42,6 +42,10 @@ import MyCasePage from "./Pages/MyCasePage"
 import GigOffersPage from "./pages/GigOffersPage"
 import MessagesPage from "./pages/MessagesPage"
 import VideoCallPage from "./pages/VideoCallPage"
+import { Toaster } from "react-hot-toast"
+import ForgotPassword from "./Pages/Auth/forgotPassword"
+import VerifyPasswordOTP from "./Pages/Auth/VerifyPasswordOtp"
+import CourseDetailRouter from "./Pages/CourseDetailRouter"
 
 // View Transition wrapper
 function ViewTransitionWrapper({ children }) {
@@ -81,6 +85,8 @@ function App() {
         <Route path="/verification-details" element={<VerificationDetails />} />
         <Route path="/liveness-check" element={<LivenessCheck />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/verify-password-otp" element={<VerifyPasswordOTP />} />
 
         {/* Main routes */}
         <Route path="/" element={<LandingLayout />}>
@@ -98,7 +104,8 @@ function App() {
           <Route path="one-on-one-preview" element={<OneOnOneCoursePreview />} />
           <Route path="creations" element={<MyCreations />} />
           <Route path="course-history" element={<CourseHistoryPage />} />
-          <Route path="course/:id" element={<OneOnOneCourseDetailsPage />} />
+          <Route path="course/:id" element={<CourseDetailRouter />} />
+          <Route path="course/:id/one-on-one" element={<OneOnOneCourseDetailsPage />} />
           <Route path="course/:id/self-paced" element={<SelfPacedCourseDetails />} />
           <Route path="post-gig" element={<PostGigPage />} />
           <Route path="case" element={<MyCasePage />} />
@@ -126,6 +133,7 @@ function App() {
           <Route path="/call/:id" element={<VideoCallPage videoOff={true} />} />
       </Routes>
       </ViewTransitionWrapper>
+      <Toaster />
     </Router>
   )
 }

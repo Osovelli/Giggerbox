@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Search, ChevronRight, Plus, Minus, CreditCard, RefreshCw, Briefcase, FilterIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,9 +9,11 @@ import { Toaster } from "sonner"
 import CardFundingModal from "@/components/Modals.jsx/CardFundingModal"
 import ConvertPointsModal from "@/components/Modals.jsx/ConvertPointsModal"
 import WithdrawModal from "@/components/Modals.jsx/Withdrawal/WithdrawModal"
+import useWalletStore from "@/store/walletStore"
+import { use } from "react"
 
 // Sample transaction data
-const transactionsData = [
+/* const transactionsData = [
   {
     id: 1,
     name: "Point Conversion",
@@ -48,9 +50,10 @@ const transactionsData = [
     amount: "N3,500.00",
     type: "earning",
   },
-]
+] */
 
 function Wallet() {
+  const { fetchBalance, walletDetails, fetchPointsDetails, pointsDetails, fetchTransactions, transactions, loading, error,  } = useWalletStore()
   const [currentPage, setCurrentPage] = useState(1)
   const [searchTerm, setSearchTerm] = useState("")
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" })
@@ -58,35 +61,113 @@ function Wallet() {
   const [isCardFundingModalOpen, setIsCardFundingModalOpen] = useState(false)
   const [activePaymentMethod, setActivePaymentMethod] = useState(null)
   const [isConvertPointsModalOpen, setIsConvertPointsModalOpen] = useState(false)
-  const [pointsBalance, setPointsBalance] = useState(1200)
+  const [pointsBalance, setPointsBalance] = useState(null)
   const [walletBalance, setWalletBalance] = useState(200000000)
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false)
+  //const { } = useWalletStore()
 
   // Table columns definition
-  const columns = [
+  /* const columns = [
     { key: "name", label: "Course Name" },
     { key: "date", label: "Date" },
     { key: "amount", label: "Amount" },
-  ]
+  ] */
+ const columns = [
+  { key: "userId", label: "User ID" },
+  { key: "type", label: "Type" },
+  { key: "amount", label: "Amount" },
+  { key: "date", label: "Date" },
+  { key: "status", label: "Status" },
+]
+
+// transform fetched transactions for the table
+const transformedTransactions = (transactions || []).map((tx) => ({
+  id: tx._id,
+  userId: tx.userId,
+  date: tx.createdAt ? new Date(tx.createdAt).toLocaleString() : "",
+  type: tx.type,
+  status: tx.status,
+  amount: typeof tx.amount === "number" ? `NGN ${tx.amount.toLocaleString()}` : tx.amount,
+  description: tx.reference || tx.description || "",
+}))
 
   // Custom cell renderer for the table
   const renderCustomCell = (key, value, row) => {
-    if (key === "name") {
+    if (key === "type") {
+      const typeKey = (value || row.type || "").toLowerCase()
+
+      const typeMap = {
+      conversion: {
+        label: "Conversion",
+        icon: <RefreshCw className="h-4 w-4 text-blue-600" />,
+        badge: "bg-blue-100 text-blue-800",
+      },
+      topup: {
+        label: "Top-up",
+        icon: <CreditCard className="h-4 w-4 text-green-600" />,
+        badge: "bg-green-100 text-green-800",
+      },
+      withdrawal: {
+        label: "Withdrawal",
+        icon: <Minus className="h-4 w-4 text-red-600" />,
+        badge: "bg-red-100 text-red-800",
+      },
+      earning: {
+        label: "Earning",
+        icon: <Briefcase className="h-4 w-4 text-yellow-600" />,
+        badge: "bg-yellow-100 text-yellow-800",
+      },
+      // fallback / custom types
+      wallet: {
+        label: "Wallet",
+        icon: <CreditCard className="h-4 w-4 text-green-600" />,
+        badge: "bg-green-100 text-green-800",
+      },
+      }
+
+      const info = typeMap[typeKey] || {
+      label: typeKey ? typeKey.charAt(0).toUpperCase() + typeKey.slice(1) : "Unknown",
+      icon: <RefreshCw className="h-4 w-4 text-gray-600" />,
+      badge: "bg-gray-100 text-gray-800",
+      }
+
       return (
-        <div className="flex items-center gap-3">
-          <div className="h-8 w-8 bg-gray-100 rounded-lg flex items-center justify-center">{row.icon}</div>
-          <div>
-            <p className="font-medium">{row.name}</p>
-            <p className="text-sm text-muted-foreground">{row.description}</p>
-          </div>
+      <div className="flex items-center gap-3">
+        <div className={`h-8 w-8 ${info.badge} rounded-lg flex items-center justify-center`}>
+        {info.icon}
         </div>
+        <div>
+        <p className="font-medium">{info.label}</p>
+        {/* {row.description && <p className="text-sm text-muted-foreground">{row.description}</p>} */}
+        </div>
+      </div>
       )
     }
+    if (key === "userId") {
+      return (
+        <span className="font-medium truncate" title={value}>
+          {typeof value === "string" && value.length > 10 ? `${value.slice(0, 6)}.....${value.slice(-4)}` : value}
+        </span>
+      )
+    }
+    /* if (key === "type") {
+      const typeStyles = {
+        conversion: "bg-blue-100 text-blue-800",
+        topup: "bg-green-100 text-green-800",
+        withdrawal: "bg-red-100 text-red-800",
+        earning: "bg-yellow-100 text-yellow-800",
+      }
+      return (<span className={`px-2 py-1 rounded-full text-sm font-medium ${typeStyles[value] || "bg-gray-100 text-gray-800"}`}>
+        {value.charAt(0).toUpperCase() + value.slice(1)}
+      </span>
+      ) 
+    } */
     return value
   }
 
   const handleAddMoney = () => {
-    setIsCardFundingModalOpen(true)
+    //setIsCardFundingModalOpen(true)
+    setIsFundWalletModalOpen(true)
   }
 
   const handleWithdraw = () => {
@@ -105,6 +186,23 @@ function Wallet() {
     setIsConvertPointsModalOpen(true)
   }
 
+  useEffect(() => {
+    fetchTransactions()
+    console.log("Transactions fetched:", transactions);
+  }, [])
+
+  useEffect(() => {
+    fetchBalance()
+  }, [])
+
+  useEffect(() => {
+    fetchPointsDetails()
+    setPointsBalance(pointsDetails?.pointsBalance || 0) 
+  }, [])
+
+
+
+
   return (
     <DashboardLayout>
       <div className="container mx-auto px-4 py-8">
@@ -117,7 +215,7 @@ function Wallet() {
             <div className="bg-indigo-50 rounded-lg p-6 space-y-4">
               <p className="text-gray-600 text-center">Wallet Balance</p>
               <h2 className="text-3xl font-bold text-center">
-              NGN {walletBalance.toLocaleString()}<span className="text-xl">.00</span>
+              NGN {walletDetails?.balance?.toLocaleString()}{/* <span className="text-xl">.00</span> */}
               </h2>
 
               <div className="grid grid-cols-2 gap-4 mt-4">
@@ -215,7 +313,7 @@ function Wallet() {
 
               {/* Transactions Table */}
               <Table
-                data={transactionsData}
+                data={transformedTransactions}
                 columns={columns}
                 renderCustomCell={renderCustomCell}
                 currentPage={currentPage}

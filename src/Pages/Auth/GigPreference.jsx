@@ -1,9 +1,9 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
-
 import AuthLayout from "@/components/Authentication/AuthLayout"
 import CustomButton from "@/components/CustomButton"
 import CategoryCard from "@/components/Authentication/GigCategoryCard"
+import useUserStore from "@/store/userStore"
 
 const gigCategories = [
   "Graphic Design",
@@ -19,6 +19,7 @@ const gigCategories = [
 ]
 
 function GigPreferences() {
+  const { updateUserGigPreferences } = useUserStore()
   const [selectedCategories, setSelectedCategories] = useState(new Set())
   const navigate = useNavigate()
 
@@ -34,12 +35,20 @@ function GigPreferences() {
     })
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
+    console.log("Selected categories:", selectedCategories)
     if (selectedCategories.size > 0) {
-      // Add your logic here to handle the selected categories
-      // For example, save to backend and redirect
-      navigate("/identity-verification")
+      try {
+        const result = await updateUserGigPreferences({
+          categories: Array.from(selectedCategories)
+        })
+        if (result?.success || result) {
+          navigate("/identity-verification")
+        }
+      } catch (error) {
+        console.error("Failed to update preferences:", error)
+      }
     }
   }
 

@@ -1,12 +1,21 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Menu } from "lucide-react"
 import CustomButton from "../CustomButton"
 import Sidebar from "./Sidebar"
 import Header from "./DashboardHeader"
 import { Outlet } from "react-router-dom"
+import useUserStore from "@/store/userStore"
 
 function DashboardLayout({ children }) {
+  const { userOnboarding, loading, user, error } = useUserStore()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  useEffect(() => {
+    // Fetch user onboarding status on mount
+    userOnboarding().catch((err) => {
+      console.error("Failed to fetch user onboarding status:", err)
+    })
+  }, [userOnboarding])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -14,7 +23,7 @@ function DashboardLayout({ children }) {
       <CustomButton
         variant="ghost"
         size="icon"
-        className="fixed top-4 left-4 z-50 lg:hidden"
+        className="fixed top-4 left-0 z-50 lg:hidden"
         onClick={() => setSidebarOpen(!sidebarOpen)}
       >
         <Menu className="h-6 w-6" />

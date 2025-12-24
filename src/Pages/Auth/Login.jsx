@@ -1,15 +1,20 @@
 import { useState } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { Link, useLocation, useNavigate } from "react-router-dom"
 import { Eye, EyeOff } from "lucide-react"
 import AuthLayout from "@/components/Authentication/AuthLayout"
 import CustomInput from "@/components/CustomInput"
 import CustomButton from "@/components/CustomButton"
+import useAuthStore from "@/store/authStore"
 
 function Login() {
+  const { login } = useAuthStore()
   const [showPassword, setShowPassword] = useState(false)
+  const location = useLocation()
+  const emailFromState = location.state?.email
+  const passwordFromState = location.state?.password
   const [formData, setFormData] = useState({
-    email: "",
-    password: "",
+    email: emailFromState || "",
+    password: passwordFromState || "",
   })
   const navigate = useNavigate()
 
@@ -21,11 +26,21 @@ function Login() {
     }))
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async(e) => {
     e.preventDefault()
     // Add your login logic here
     console.log("Login attempt with:", formData)
-    navigate("/dashboard")
+    try {
+      await login(
+        {
+          email: formData.email,
+          password: formData.password,
+        },
+      )
+      navigate("/dashboard")
+    } catch (error) {
+      console.error("Login failed:", error)
+    }
   }
 
   return (

@@ -1,14 +1,28 @@
 import { useState } from "react"
 import { X, ChevronRight } from "lucide-react"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import AddCardModal from "./AddCardModal"
+import useWalletStore from "@/store/walletStore"
 
 function CardFundingModal({ isOpen, onClose }) {
+  const { createManualDeposit, loading, error } = useWalletStore()
   const [amount, setAmount] = useState("")
   const [isAddCardModalOpen, setIsAddCardModalOpen] = useState(false)
   const [selectedCard, setSelectedCard] = useState("mastercard")
+
+  /* const handleDeposit = async() => {
+    // Handle deposit logic here
+    console.log(`Depositing ₦${amount} using ${selectedCard}`)
+    try {
+      await createManualDeposit({ amount: parseFloat(amount) })
+      setAmount("")
+      onClose()
+    } catch (error) {
+      console.error("Deposit failed:", error)
+    }
+  } */
 
   // Sample cards data
   const cards = [
@@ -58,6 +72,7 @@ function CardFundingModal({ isOpen, onClose }) {
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogTitle className="sr-only">Fund Wallet</DialogTitle>
         <DialogContent className="sm:max-w-md p-6">
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-xl font-bold">Card</h2>
@@ -113,6 +128,17 @@ function CardFundingModal({ isOpen, onClose }) {
               onClick={handleAddCard}
             >
               Add Card
+            </Button>
+            <Button 
+              variant="primary" 
+              className="w-full bg-gray-100 hover:bg-gray-200 text-gray-900"
+              onClick={() => {
+                // Handle fund wallet action
+                console.log(`Funding wallet with ₦${amount} using ${selectedCard}`)
+                handleDeposit()
+              }}
+            >
+              Fund Wallet
             </Button>
           </div>
         </DialogContent>

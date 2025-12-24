@@ -4,9 +4,11 @@ import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import ConfirmConversionModal from "./ConfirmConversionModal"
+import useWalletStore from "@/store/walletStore"
 
 
-function ConvertPointsModal({ isOpen, onClose, availablePoints = 1200 }) {
+function ConvertPointsModal({ isOpen, onClose, availablePoints = 100 }) {
+  const { convertPointsToWallet, loading } = useWalletStore()
   const [points, setPoints] = useState("")
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false)
 

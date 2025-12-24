@@ -1,6 +1,6 @@
 import { toast as sonnerToast } from "sonner"
 
-export function toast({ title, description, action, cancel, important, variant = "default" }) {
+export function useToast({ title, description, action, cancel, important, variant = "default" }) {
   return sonnerToast(title || "", {
     description,
     action,
@@ -10,4 +10,4 @@ export function toast({ title, description, action, cancel, important, variant =
   })
 }
 
-export { useToast } from "sonner"
+//export { useToast } from "sonner"

@@ -1,77 +1,21 @@
 import { useState, useRef, useEffect } from "react"
-import { ArrowLeft, Star, Play, Pause, Volume2, VolumeX } from "lucide-react"
+import { ArrowLeft, Star, Play, Pause, Volume2, VolumeX, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { cn } from "@/lib/utils"
-import { useNavigate } from "react-router-dom"
+import { useLocation, useNavigate, useParams } from "react-router-dom"
 import EnrollmentSuccessModal from "@/components/Modals.jsx/EnrollmentSuccessModal"
 import CourseSidebar from "../components/CourseSidebar"
+import useCourseStore from "@/store/courseStore"
+import toast from "react-hot-toast"
 
 const tabs = [
   { id: "details", label: "Details" },
   { id: "reviews", label: "Reviews" },
 ]
 
-// Sample course data
-const course = {
-  title: "Introduction to Graphic Design",
-  price: "20,000",
-  learners: "2k",
-  type: "Self-paced course",
-  duration: "20 hrs",
-  description: `Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam a ultrices mi, a tempor lectus. Quisque eget tellus nec mi venenatis condimentum. Sed rhoncus pellentesque bibendum. Curabitur a lacinia tellus. Interdum et malesuada fames ac ante ipsum primis in faucibus. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Cras mattis justo diam, at fermentum mi euismod vitae. Integer pellentesque viverra molestie. Donec vel pellentesque lorem. Praesent tempor, velit vel viverra semper, urna ante posuere ante, id volutpat tortor leo nec turpis. Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-
-  Donec elementum mollis est, in mollis lorem ultrices et. Aenean posuere bibendum ipsum sit amet egestas. Cras consequat velit ante, maximus egestas sapien elementum nec. Nunc blandit sit amet elit eget pellentesque. Donec ac tortor dolor. Sed sit amet nunc eget leo viverra malesuada. Nam eget metus id risus dignissim euismod vel at erat. Ut euismod aliquam metus, vel finibus metus vestibulum sed. Praesent id eros lacinia, tincidunt metus et, iaculis erat. Curabitur fermentum porta sodales. Maecenas quam eros, pretium vel elit nec, consequat pellentesque dolor. Nunc quis massa eros.`,
-  instructor: {
-    name: "John Doe",
-    avatar: "/avatar.jpeg",
-    rating: 3.5,
-    reviews: 128,
-  },
-  sections: [
-    {
-      id: 1,
-      title: "SECTION 1",
-      lessons: [
-        { id: 1, title: "Title goes in here", duration: "5:18", active: true, completed: false },
-        { id: 2, title: "Title goes in here", duration: "4:32", completed: false },
-        { id: 3, title: "Title goes in here", duration: "6:45", completed: false },
-        { id: 4, title: "Title goes in here", duration: "3:21", completed: false },
-        { id: 5, title: "Title goes in here", duration: "7:15", completed: false },
-        { id: 6, title: "Title goes in here", duration: "5:50", completed: false },
-        { id: 7, title: "Title goes in here", duration: "8:22", completed: false },
-      ],
-    },
-    {
-      id: 2,
-      title: "SECTION 2",
-      lessons: [
-        { id: 1, title: "Introduction to Section 2", duration: "5:45", completed: false },
-        { id: 2, title: "Advanced Concepts", duration: "10:20", completed: false },
-      ],
-    },
-    {
-      id: 3,
-      title: "SECTION 3",
-      lessons: [
-        { id: 1, title: "Section 3 Overview", duration: "5:10", completed: false },
-        { id: 2, title: "Practical Applications", duration: "15:30", completed: false },
-      ],
-    },
-    {
-      id: 4,
-      title: "SECTION 4",
-      lessons: [{ id: 1, title: "Final Project Introduction", duration: "5:25", completed: false }],
-    },
-    {
-      id: 5,
-      title: "SECTION 5",
-      lessons: [{ id: 1, title: "Course Conclusion", duration: "5:15", completed: false }],
-    },
-  ],
-}
-
-const reviews = [
+// Sample reviews data (to be replaced with real data when available)
+const sampleReviews = [
   {
     id: 1,
     name: "John Doe",
@@ -84,24 +28,86 @@ const reviews = [
 ]
 
 function SelfPacedCourseDetails() {
+  const { getCourseById, loading } = useCourseStore()
+  //const { id } = useParams()
+  const location = useLocation()
+  const navigate = useNavigate()
+
+  const [course, setCourse] = useState(null)
   const [activeTab, setActiveTab] = useState("details")
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
   const [isEnrollmentSuccessOpen, setIsEnrollmentSuccessOpen] = useState(false)
-  const [currentSectionId, setCurrentSectionId] = useState(1)
-  const [currentLessonId, setCurrentLessonId] = useState(1)
+  const [currentSectionIndex, setCurrentSectionIndex] = useState(0)
+  const [currentLessonIndex, setCurrentLessonIndex] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
   const [volume, setVolume] = useState(75)
   const [isMuted, setIsMuted] = useState(false)
   const [progress, setProgress] = useState(0)
   const [currentTime, setCurrentTime] = useState("0:00")
   const [duration, setDuration] = useState("0:00")
-  const [isFullscreen, setIsFullscreen] = useState(false)
   const [showControls, setShowControls] = useState(true)
   const [lastActivity, setLastActivity] = useState(Date.now())
 
   const videoRef = useRef(null)
   const videoContainerRef = useRef(null)
-  const navigate = useNavigate()
+
+  const stateCourse = location.state?.course
+
+  useEffect(() => {
+    if (stateCourse) {
+      setCourse(stateCourse)
+    }
+  }, [stateCourse])
+
+
+  // Fetch course details
+  /* useEffect(() => {
+    const fetchCourse = async () => {
+      try {
+        const response = await getCourseById(id)
+        
+        if (response && response.data) {
+          setCourse(response.data)
+        } else {
+          toast.error("Course not found")
+          navigate("/dashboard/courses")
+        }
+      } catch (error) {
+        console.error("Error fetching course details:", error)
+        toast.error("Failed to load course details")
+      }
+    }
+
+    if (id) {
+      fetchCourse()
+    }
+  }, [id, getCourseById, navigate]) */
+
+  // Transform lessons data into sections format for the sidebar
+  const getSectionsFromLessons = () => {
+    if (!course || !course.lessons || course.lessons.length === 0) {
+      return []
+    }
+
+    return course.lessons.map((lesson, index) => ({
+      id: index + 1,
+      title: `LESSON ${index + 1}`,
+      lessons: [
+        {
+          id: 1,
+          title: lesson.title,
+          duration: lesson.duration || "0:00",
+          active: index === currentSectionIndex,
+          completed: false,
+          description: lesson.description,
+          resources: lesson.resources || [],
+          videos: lesson.videos || [],
+        },
+      ],
+    }))
+  }
+
+  const sections = getSectionsFromLessons()
 
   // Handle video controls
   const handlePlayPause = () => {
@@ -148,6 +154,7 @@ function SelfPacedCourseDetails() {
   }
 
   const formatTime = (seconds) => {
+    if (isNaN(seconds)) return "0:00"
     const minutes = Math.floor(seconds / 60)
     const remainingSeconds = Math.floor(seconds % 60)
     return `${minutes}:${remainingSeconds < 10 ? "0" : ""}${remainingSeconds}`
@@ -156,16 +163,16 @@ function SelfPacedCourseDetails() {
   const handleTimeUpdate = () => {
     if (videoRef.current) {
       const currentProgress = (videoRef.current.currentTime / videoRef.current.duration) * 100
-      setProgress(currentProgress)
+      setProgress(currentProgress || 0)
       setCurrentTime(formatTime(videoRef.current.currentTime))
     }
   }
 
-  const handleLessonSelect = (sectionId, lessonId) => {
-    setCurrentSectionId(sectionId)
-    setCurrentLessonId(lessonId)
-    // In a real app, you would load the selected lesson's video here
-    // For demo purposes, we'll just reset the video
+  const handleLessonSelect = (sectionIndex, lessonIndex) => {
+    setCurrentSectionIndex(sectionIndex)
+    setCurrentLessonIndex(lessonIndex)
+    
+    // Reset video
     if (videoRef.current) {
       videoRef.current.currentTime = 0
       setProgress(0)
@@ -182,7 +189,8 @@ function SelfPacedCourseDetails() {
 
   const handleContinueAfterEnrollment = () => {
     setIsEnrollmentSuccessOpen(false)
-    // Add navigation logic here
+    // Navigate to courses or my learning
+    navigate("/dashboard/my-case")
   }
 
   // Auto-hide controls after inactivity
@@ -228,7 +236,23 @@ function SelfPacedCourseDetails() {
         videoElement.removeEventListener("loadedmetadata", handleLoadedMetadata)
       }
     }
-  }, [])
+  }, [course])
+
+  // Loading state
+  if (loading || !course) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading course details...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Calculate total hours from duration (in weeks)
+  const totalHours = course.duration ? `${course.duration} weeks` : "N/A"
+  const learnerCount = course.enrollmentCount || "0"
 
   return (
     <div className="min-h-screen bg-background">
@@ -242,13 +266,13 @@ function SelfPacedCourseDetails() {
             <div>
               <h1 className="text-xl font-semibold">{course.title}</h1>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>₦ {course.price}</span>
+                <span>₦ {course.price?.toLocaleString()}</span>
                 <span>•</span>
-                <span>{course.learners} learners</span>
+                <span>{learnerCount} learners</span>
                 <span>•</span>
-                <span>{course.type}</span>
+                <span className="capitalize">{course.type?.replace("-", " ")}</span>
                 <span>•</span>
-                <span>{course.duration}</span>
+                <span>{totalHours}</span>
               </div>
             </div>
           </div>
@@ -271,8 +295,9 @@ function SelfPacedCourseDetails() {
                 poster="/course preview thumbnail.png"
                 onTimeUpdate={handleTimeUpdate}
                 onEnded={() => setIsPlaying(false)}
+                src={course.videoUrl}
               >
-                <source src="/placeholder.mp4" type="video/mp4" />
+                <source src={course.videoUrl} type="video/mp4" />
                 Your browser does not support the video tag.
               </video>
 
@@ -323,8 +348,7 @@ function SelfPacedCourseDetails() {
                       </div>
 
                       <div className="text-white text-sm">
-                        {course.sections[currentSectionId - 1]?.lessons[currentLessonId - 1]?.title ||
-                          "Title goes in here"}
+                        {course.lessons?.[currentSectionIndex]?.title || "Course Video"}
                       </div>
                     </div>
                   </div>
@@ -367,40 +391,77 @@ function SelfPacedCourseDetails() {
               <div className="space-y-6">
                 <div>
                   <h2 className="text-lg font-semibold mb-4">About the course</h2>
-                  <p className="text-muted-foreground">
-                    {isDescriptionExpanded ? course.description : `${course.description.slice(0, 500)}...`}
+                  <p className="text-muted-foreground whitespace-pre-wrap">
+                    {isDescriptionExpanded 
+                      ? course.description 
+                      : course.description.length > 500 
+                        ? `${course.description.slice(0, 500)}...` 
+                        : course.description
+                    }
                   </p>
-                  <button
-                    onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
-                    className="text-primary hover:underline mt-2"
-                  >
-                    {isDescriptionExpanded ? "Show less" : "Show all"}
-                  </button>
+                  {course.description.length > 500 && (
+                    <button
+                      onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                      className="text-primary hover:underline mt-2"
+                    >
+                      {isDescriptionExpanded ? "Show less" : "Show more"}
+                    </button>
+                  )}
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <img src={course.instructor.avatar || "/placeholder.svg"} alt="" className="h-12 w-12 rounded-full" />
-                  <div>
-                    <h3 className="font-medium">{course.instructor.name}</h3>
-                    <div className="flex items-center gap-1">
-                      <div className="flex">
-                        {[...Array(5)].map((_, i) => (
-                          <Star
-                            key={i}
-                            className={`h-4 w-4 ${
-                              i < Math.floor(course.instructor.rating)
-                                ? "text-yellow-400 fill-yellow-400"
-                                : i < course.instructor.rating
-                                  ? "text-yellow-400 fill-yellow-400 opacity-50"
-                                  : "text-gray-300"
-                            }`}
-                          />
-                        ))}
-                      </div>
-                      <span className="text-sm text-muted-foreground">({course.instructor.reviews})</span>
+                {/* Course Details */}
+                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                  <h3 className="font-semibold mb-3">Course Information</h3>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Duration:</span>
+                      <span className="ml-2 font-medium">{course.duration} weeks</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Lessons:</span>
+                      <span className="ml-2 font-medium">{course.lessons?.length || 0}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Course Type:</span>
+                      <span className="ml-2 font-medium capitalize">{course.type?.replace("-", " ")}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Price:</span>
+                      <span className="ml-2 font-medium">₦{course.price?.toLocaleString()}</span>
                     </div>
                   </div>
                 </div>
+
+                {/* Instructor Info */}
+                <div className="flex items-center gap-3 p-4 border rounded-lg">
+                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-lg">
+                    {course.tutor?.email?.charAt(0).toUpperCase() || "T"}
+                  </div>
+                  <div>
+                    <h3 className="font-medium">Instructor</h3>
+                    <p className="text-sm text-muted-foreground">{course.tutor?.email || "Course Instructor"}</p>
+                  </div>
+                </div>
+
+                {/* Lessons Overview */}
+                {course.lessons && course.lessons.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold mb-3">Course Content</h3>
+                    <div className="space-y-3">
+                      {course.lessons.map((lesson, index) => (
+                        <div key={index} className="border rounded-lg p-4">
+                          <h4 className="font-medium mb-1">{lesson.title}</h4>
+                          <p className="text-sm text-muted-foreground mb-2">{lesson.description}</p>
+                          {lesson.resources && lesson.resources.length > 0 && (
+                            <div className="text-xs text-muted-foreground">
+                              {lesson.resources.length} resource{lesson.resources.length > 1 ? "s" : ""} available
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -411,15 +472,18 @@ function SelfPacedCourseDetails() {
                 {/* Overall Rating */}
                 <div className="bg-gray-50 p-6 rounded-lg flex items-center gap-8">
                   <div className="text-center">
-                    <div className="text-4xl font-bold">4.5</div>
+                    <div className="text-4xl font-bold">{course.rating || "N/A"}</div>
                     <div className="flex">
                       {[...Array(5)].map((_, i) => (
                         <Star
                           key={i}
-                          className={`h-4 w-4 ${i < 4 ? "text-yellow-400 fill-yellow-400" : "text-gray-300"}`}
+                          className={`h-4 w-4 ${i < Math.floor(course.rating || 0) ? "text-yellow-400 fill-yellow-400" : "text-gray-300"}`}
                         />
                       ))}
                     </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {course.reviewCount || 0} review{course.reviewCount !== 1 ? "s" : ""}
+                    </p>
                   </div>
                   <div className="flex-1 space-y-2">
                     {[5, 4, 3, 2, 1].map((rating) => (
@@ -433,10 +497,12 @@ function SelfPacedCourseDetails() {
 
                 {/* Reviews List */}
                 <div className="space-y-6">
-                  {reviews.map((review) => (
+                  {sampleReviews.map((review) => (
                     <div key={review.id} className="space-y-2">
                       <div className="flex items-center gap-2">
-                        <img src={review.avatar || "/placeholder.svg"} alt="" className="h-10 w-10 rounded-full" />
+                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                          <span className="text-primary font-semibold">{review.name.charAt(0)}</span>
+                        </div>
                         <div>
                           <div className="font-medium">{review.name}</div>
                           <div className="flex items-center gap-2">
@@ -467,10 +533,10 @@ function SelfPacedCourseDetails() {
           <div className="lg:w-1/3">
             <div className="sticky top-6 bg-white rounded-lg border overflow-hidden">
               <CourseSidebar
-                sections={course.sections}
-                currentSectionId={currentSectionId}
-                currentLessonId={currentLessonId}
-                onLessonSelect={handleLessonSelect}
+                sections={sections}
+                currentSectionId={currentSectionIndex + 1}
+                currentLessonId={currentLessonIndex + 1}
+                onLessonSelect={(sectionId, lessonId) => handleLessonSelect(sectionId - 1, lessonId - 1)}
                 videoProgress={progress}
                 isPlaying={isPlaying}
                 volume={volume}
@@ -481,7 +547,7 @@ function SelfPacedCourseDetails() {
 
               <div className="p-4 border-t">
                 <Button className="w-full bg-black hover:bg-black/90" onClick={handleEnrollAndPay}>
-                  Enrol & Pay
+                  Enrol & Pay - ₦{course.price?.toLocaleString()}
                 </Button>
               </div>
             </div>
@@ -495,7 +561,7 @@ function SelfPacedCourseDetails() {
         courseTitle={course.title}
         date="Start anytime"
         time="Self-paced"
-        tutorName={course.instructor.name}
+        tutorName={course.tutor?.email || "Instructor"}
         onContinue={handleContinueAfterEnrollment}
       />
     </div>

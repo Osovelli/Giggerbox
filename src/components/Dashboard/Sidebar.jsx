@@ -49,7 +49,7 @@ function Sidebar({ open, onClose }) {
   return (
     <>
       {/* Backdrop */}
-      {open && <div className="fixed inset-0 bg-black/50 lg:hidden" onClick={onClose} />}
+      {open && <div className="fixed inset-0 z-10 bg-black/50 lg:hidden" onClick={onClose} />}
 
       {/* Sidebar */}
       <div

@@ -16,6 +16,16 @@ const verificationOptions = [
     title: "National Identity Number (NIN)",
     description: "",
   },
+  {
+    value: "passport",
+    title: "Passport",
+    description: "",
+  },
+  {
+    value: "driving-license",
+    title: "Driving License",
+    description: "",
+  },
 ]
 
 function DocumentVerification() {

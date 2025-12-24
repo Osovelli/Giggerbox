@@ -3,23 +3,30 @@ import { X, ArrowRight } from "lucide-react"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import ConversionResultModal from "./ConversionResultModal"
+import useWalletStore from "@/store/walletStore"
 
 function ConfirmConversionModal({ isOpen, onClose, points, amount, onResult }) {
+  const { convertPointsToWallet, loading } = useWalletStore()
   const [isProcessing, setIsProcessing] = useState(false)
   const [isResultModalOpen, setIsResultModalOpen] = useState(false)
   const [conversionSuccess, setConversionSuccess] = useState(false)
 
   const handleConfirm = () => {
     setIsProcessing(true)
+    convertPointsToWallet({ points })
+    onClose()
+    setConversionSuccess(true)
+    setIsProcessing(false)
+    setIsResultModalOpen(true)
 
     // Simulate API call with a timeout
-    setTimeout(() => {
+    /* setTimeout(() => {
       // For demo purposes, let's assume 90% success rate
       const success = Math.random() < 0.5
       setConversionSuccess(success)
       setIsProcessing(false)
       setIsResultModalOpen(true)
-    }, 1500)
+    }, 1500) */
   }
 
   const handleResultModalClose = () => {
@@ -72,8 +79,12 @@ function ConfirmConversionModal({ isOpen, onClose, points, amount, onResult }) {
               <Button variant="outline" className="flex-1" onClick={onClose} disabled={isProcessing}>
                 Cancel
               </Button>
-              <Button className="flex-1 bg-black hover:bg-black/90" onClick={handleConfirm} disabled={isProcessing}>
-                {isProcessing ? "Processing..." : "Confirm"}
+              <Button 
+              className="flex-1 bg-black hover:bg-black/90" 
+              onClick={handleConfirm} 
+              disabled={loading && isProcessing}
+              >
+                {isProcessing && loading ? "Processing..." : "Confirm"}
               </Button>
             </div>
           </div>

@@ -1,32 +1,26 @@
 import { useState } from "react"
-import { useLocation, useNavigate } from "react-router-dom"
+import { useNavigate } from "react-router-dom"
 import AuthLayout from "@/components/Authentication/AuthLayout"
 import CustomInput from "@/components/CustomInput"
 import CustomButton from "@/components/CustomButton"
 import ResetPasswordModal from "@/components/Authentication/ResetPasswordModal"
 import useAuthStore from "@/store/authStore"
 
-function ResetPassword() {
-  const { resetPassword, loading } = useAuthStore()
-  //const [email, setEmail] = useState("")
-  const location = useLocation()
-  const [email, setEmail] = useState(location.state?.email || "")
-  const [newPassword, setNewPassword] = useState("")
-/*   const [error, setError] = useState("")
-  const [isModalOpen, setIsModalOpen] = useState(false) */
+function ForgotPassword() {
+  const { forgotPassword, loading } = useAuthStore()
+  const [email, setEmail] = useState("")
   const navigate = useNavigate()
 
   const handleSubmit = async(e) => {
     e.preventDefault()
-    console.log("Reset password for:", email, newPassword)
+    console.log("Reset password for:", email)
 
     try {
-      await resetPassword(
-        { email,
-          newPassword 
-        }
+      await forgotPassword(
+        { email }
       )
-      navigate("/signin", { state: { email, newPassword } })
+      setEmail("")
+      navigate("/verify-password-otp", { state: { email } })
     } catch (error) {
       console.error("Error during password reset:", error)
     }
@@ -43,7 +37,7 @@ function ResetPassword() {
     <AuthLayout>
       <div className="bg-white rounded-xl p-8 shadow-sm">
         <div className="mb-8">
-          <h1 className="text-2xl font-semibold mb-2">Reset Your Password</h1>
+          <h1 className="text-2xl font-semibold mb-2">Change Your Password</h1>
           <p className="text-muted-foreground">Enter your email to receive a reset link.</p>
         </div>
 
@@ -56,21 +50,13 @@ function ResetPassword() {
             onChange={(e) => setEmail(e.target.value)}
           />
 
-          <CustomInput
-            label="New Password"
-            type="password"
-            placeholder="Enter your new password"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-          />
-
           <CustomButton 
           onClick={handleSubmit}
           type="submit" 
           className="w-full bg-black hover:bg-black/90"
           disabled={loading}
           >
-            Reset Password
+            Send Reset Link
           </CustomButton>
         </form>
       </div>
@@ -80,5 +66,5 @@ function ResetPassword() {
 }
 
 
-export default ResetPassword
+export default ForgotPassword
 

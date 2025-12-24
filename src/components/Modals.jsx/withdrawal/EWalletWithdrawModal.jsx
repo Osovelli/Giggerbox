@@ -117,7 +117,7 @@ function EWalletWithdrawModal({ isOpen, onClose, walletBalance }) {
                   className={errors.amount ? "border-red-500" : ""}
                 />
                 {errors.amount && <p className="text-sm text-red-500">{errors.amount}</p>}
-                <p className="text-sm text-gray-500">Balance: N{walletBalance.toLocaleString()}</p>
+                {/* <p className="text-sm text-gray-500">Balance: N{walletBalance?.toLocaleString()}</p> */}
               </div>
 
               {/* E-wallet Selection */}

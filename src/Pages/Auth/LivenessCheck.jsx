@@ -4,6 +4,7 @@ import AuthLayout from "@/components/Authentication/AuthLayout"
 import { Button } from "@/components/ui/button"
 import { Camera } from "lucide-react"
 import SuccessModal from "@/components/Authentication/SuccessModal"
+import useUserStore from "@/store/userStore"
 
 const STATES = {
   INITIAL: "initial",
@@ -12,6 +13,7 @@ const STATES = {
 }
 
 function LivenessCheck() {
+  const { selfieVerification, loading, error: storeError } = useUserStore()
   const [checkState, setCheckState] = useState(STATES.INITIAL)
   const [cameraError, setCameraError] = useState(null)
   const [capturedImage, setCapturedImage] = useState(null)
@@ -31,19 +33,20 @@ function LivenessCheck() {
         },
         audio: false
       })
-      
+
+      // store stream and attach if video is already mounted
       streamRef.current = stream
       if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        // Wait for video to be ready
-        await new Promise((resolve) => {
-          videoRef.current.onloadedmetadata = () => {
-            resolve()
-          }
-        })
-        // Start playing the video
-        await videoRef.current.play()
+        try {
+          videoRef.current.srcObject = stream
+          await videoRef.current.play()
+        } catch (err) {
+          // Play might fail due to autoplay policies; we'll still set the state and attach later
+          console.warn("Could not autoplay video immediately:", err)
+        }
       }
+
+      setCameraError(null)
       setCheckState(STATES.CAMERA_ACTIVE)
     } catch (err) {
       console.error("Error accessing camera:", err)
@@ -61,21 +64,33 @@ function LivenessCheck() {
       streamRef.current = null
     }
     if (videoRef.current) {
-      videoRef.current.srcObject = null
+      try {
+        videoRef.current.pause()
+      } catch (e) {
+        /* ignore */
+      }
+      try {
+        videoRef.current.srcObject = null
+      } catch (e) {
+        /* ignore */
+      }
     }
   }
 
   const capturePhoto = () => {
-    if (videoRef.current) {
+    const video = videoRef.current
+    if (video) {
       try {
         shutterRef.current.play().catch(console.error)
 
         const canvas = document.createElement("canvas")
-        const video = videoRef.current
         
-        // Set canvas dimensions to match video dimensions
-        canvas.width = video.videoWidth
-        canvas.height = video.videoHeight
+        // Use actual video dimensions to capture the correct aspect ratio
+        const vWidth = video.videoWidth || 1280
+        const vHeight = video.videoHeight || 720
+
+        canvas.width = vWidth
+        canvas.height = vHeight
         
         const ctx = canvas.getContext("2d")
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
@@ -84,22 +99,74 @@ function LivenessCheck() {
         setCapturedImage(imageData)
         stopCamera()
         setCheckState(STATES.PHOTO_CAPTURED)
+        setCameraError(null)
       } catch (err) {
         console.error("Error capturing photo:", err)
         setCameraError("Failed to capture photo: " + err.message)
       }
+    } else {
+      setCameraError("Camera not available for capture.")
     }
   }
 
-  // Clean up camera on unmount
+  // If we switch to CAMERA_ACTIVE and the stream exists but the video element wasn't present
+  // when we acquired the stream, attach the stream and start playback now.
+  useEffect(() => {
+    if (checkState === STATES.CAMERA_ACTIVE && videoRef.current && streamRef.current) {
+      const video = videoRef.current
+      try {
+        video.srcObject = streamRef.current
+      } catch (e) {
+        console.error("Failed to set video srcObject:", e)
+      }
+
+      const tryPlay = async () => {
+        try {
+          await video.play()
+        } catch (err) {
+          // Autoplay might be blocked; user can still click capture which should work after allowing camera
+          console.warn("Video play prevented:", err)
+        }
+      }
+
+      // Ensure metadata is loaded before attempting to play to get videoWidth/videoHeight
+      if (video.readyState >= 1) {
+        tryPlay()
+      } else {
+        const onLoaded = () => {
+          tryPlay()
+          video.removeEventListener("loadedmetadata", onLoaded)
+        }
+        video.addEventListener("loadedmetadata", onLoaded)
+      }
+    }
+  }, [checkState])
+
   useEffect(() => {
     return () => {
       stopCamera()
     }
-  }, []) // Remove stopCamera from dependencies to avoid recreation
+  }, [])
 
   const handleSkip = () => {
     navigate("/dashboard")
+  }
+
+  const submitSelfie = async () => {
+    if (!capturedImage) {
+      setCameraError("No selfie captured.")
+      return
+    }
+    try {
+      // Send an object with selfieImage. The example supplied was a URL string,
+      // here we pass the captured data URL; replace with an uploaded URL if needed.
+      const payload = { selfieImage: capturedImage }
+      await selfieVerification(payload)
+      setShowSuccessModal(true)
+    } catch (err) {
+      console.error("Selfie verification failed:", err)
+      setCameraError(err?.message || "Verification failed. Please try again.")
+    }
   }
 
   const handleButtonClick = () => {
@@ -111,9 +178,7 @@ function LivenessCheck() {
         capturePhoto()
         break
       case STATES.PHOTO_CAPTURED:
-        console.log("Captured image:", capturedImage)
-        // Show success modal instead of navigating directly
-        setShowSuccessModal(true)
+        submitSelfie()
         break
       default:
         break
@@ -122,9 +187,11 @@ function LivenessCheck() {
 
   const handleModalClose = () => {
     setShowSuccessModal(false)
+    navigate("/dashboard")
   }
 
   const getButtonText = () => {
+    if (loading) return "Processing..."
     switch (checkState) {
       case STATES.INITIAL:
         return "Start"
@@ -151,10 +218,10 @@ function LivenessCheck() {
           <div className="relative aspect-[4/3] max-w-md mx-auto">
             {checkState === STATES.INITIAL ? (
               <div className="w-full h-full bg-gray-100 rounded-lg flex items-center justify-center">
-                {cameraError ? (
+                {cameraError || storeError ? (
                   <div className="text-center p-4">
                     <Camera className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">{cameraError}</p>
+                    <p className="text-sm text-muted-foreground">{cameraError || storeError}</p>
                   </div>
                 ) : (
                   <img
@@ -190,16 +257,15 @@ function LivenessCheck() {
           </div>
 
           <div className="flex gap-4">
-            <Button onClick={handleButtonClick} className="flex-1 bg-black hover:bg-black/90" disabled={cameraError}>
+            <Button onClick={handleButtonClick} className="flex-1 bg-black hover:bg-black/90" disabled={!!cameraError || loading}>
               {getButtonText()}
             </Button>
-            <Button variant="secondary" className="flex-1" onClick={handleSkip}>
+            <Button variant="secondary" className="flex-1" onClick={handleSkip} disabled={loading}>
               Skip
             </Button>
           </div>
         </div>
       </div>
-      {/* Success Modal */}
       <SuccessModal isOpen={showSuccessModal} onClose={handleModalClose} />
     </AuthLayout>
   )

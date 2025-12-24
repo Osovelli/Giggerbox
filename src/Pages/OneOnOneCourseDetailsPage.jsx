@@ -1,11 +1,13 @@
-import { useState } from "react"
-import { ArrowLeft, Star, Play, Calendar, Clock, Check, Paperclip, Smile } from "lucide-react"
+import { useEffect, useState } from "react"
+import { ArrowLeft, Star, Play, Calendar, Clock, Check, Paperclip, Smile, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
 import { cn } from "@/lib/utils"
-import { useNavigate } from "react-router-dom"
+import { useLocation, useNavigate, useParams } from "react-router-dom"
 import EnrollmentSuccessModal from "@/components/Modals.jsx/EnrollmentSuccessModal"
+import useCourseStore from "@/store/courseStore"
+import toast from "react-hot-toast"
 
 const tabs = [
   { id: "details", label: "Details" },
@@ -13,6 +15,7 @@ const tabs = [
   { id: "chat", label: "Chat" },
 ]
 
+// Sample data for class schedule (to be replaced with real data when available)
 const classSchedule = [
   {
     id: 1,
@@ -35,10 +38,10 @@ const classSchedule = [
     time: "2pm",
     completed: false,
   },
-  // Add more classes...
 ]
 
-const reviews = [
+// Sample reviews (to be replaced with real data when available)
+const sampleReviews = [
   {
     id: 1,
     name: "John Doe",
@@ -48,10 +51,10 @@ const reviews = [
     comment:
       "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam vel augue sit amet est molestie viverra. Nunc quis bibendum orci. Donec feugiat massa mi, at hendrerit mauris rutrum at. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam vel augue sit amet est molestie viverra. Nunc quis bib...",
   },
-  // Add more reviews...
 ]
 
-const messages = [
+// Sample messages (to be replaced with real chat data when available)
+const sampleMessages = [
   {
     id: 1,
     text: "Hey, what's up? 😊",
@@ -72,7 +75,7 @@ const messages = [
   },
   {
     id: 4,
-    text: "Not yet, but I was thinking of going for a hike. Want to joinme?",
+    text: "Not yet, but I was thinking of going for a hike. Want to join me?",
     sender: "instructor",
     time: "10:05 PM",
   },
@@ -85,53 +88,111 @@ const messages = [
 ]
 
 function OneOnOneCourseDetailsPage() {
+  const { getCourseById, loading } = useCourseStore()
+  const { id } = useParams()
+  const location = useLocation()
+  const navigate = useNavigate()
+  
+  const [course, setCourse] = useState(null)
   const [activeTab, setActiveTab] = useState("details")
   const [newMessage, setNewMessage] = useState("")
-  const navigate = useNavigate()
   const [isEnrollmentSuccessOpen, setIsEnrollmentSuccessOpen] = useState(false)
+  const [messages, setMessages] = useState(sampleMessages)
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
 
-  const course = {
-    title: "Introduction to Graphic Design",
-    price: "20,000",
-    learners: "2k",
-    type: "1-on-1 course",
-    duration: "20 hrs",
-    description: `Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam a ultrices mi, a tempor lectus. Quisque eget tellus nec mi venenatis condimentum. Sed rhoncus pellentesque bibendum. Curabitur a lacinia tellus. Interdum et malesuada fames ac ante ipsum primis in faucibus. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Cras mattis justo diam, at fermentum mi euismod vitae. Integer pellentesque viverra molestie. Donec vel pellentesque lorem. Praesent tempor, velit vel viverra semper, urna ante posuere ante, id volutpat tortor leo nec turpis. Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+  // Fetch course details
+  /* useEffect(() => {
+    const fetchCourse = async () => {
+      try {
+        const response = await getCourseById(id)
+        
+        if (response && response.data) {
+          setCourse(response.data)
+        } else {
+          toast.error("Course not found")
+          navigate("/dashboard/courses")
+        }
+      } catch (error) {
+        console.error("Error fetching course details:", error)
+        toast.error("Failed to load course details")
+      }
+    }
 
-    Donec elementum mollis est, in mollis lorem ultrices et. Aenean posuere bibendum ipsum sit amet egestas. Cras consequat velit ante, maximus egestas sapien elementum nec. Nunc blandit sit amet elit eget pellentesque. Donec ac tortor dolor. Sed sit amet nunc eget leo viverra malesuada. Nam eget metus id risus dignissim euismod vel at erat. Ut euismod aliquam metus, vel finibus metus vestibulum sed. Praesent id eros lacinia, tincidunt metus et, iaculis erat. Curabitur fermentum porta sodales. Maecenas quam eros, pretium vel elit nec, consequat pellentesque dolor. Nunc quis massa eros. Lorem ipsum dol...`,
-    instructor: {
-      name: "John Doe",
-      avatar: "/avatar.jpeg",
-      rating: 3.5,
-      reviews: 128,
-    },
-    availableStartDates: [
-      { date: "Friday, 2 Feb", time: "9:20am" },
-      { date: "Sun, 4 Feb", time: "1:00pm" },
-      { date: "Tue, 6 Feb", time: "11:00am" },
-      { date: "Wed, 7 Feb", time: "1:00pm" },
-    ],
+    if (id) {
+      fetchCourse()
+    }
+  }, [id, getCourseById, navigate]) */
+
+  const stateCourse = location.state?.course
+  
+  useEffect(() => {
+    if (stateCourse) {
+      setCourse(stateCourse)
+    }
+  }, [stateCourse])
+
+
+  // Transform available times into a more readable format
+  const getAvailableStartDates = () => {
+    if (!course || !course.availableTimes || course.availableTimes.length === 0) {
+      return []
+    }
+
+    const formattedDates = []
+    course.availableTimes.forEach((timeSlot) => {
+      const day = timeSlot.day.charAt(0).toUpperCase() + timeSlot.day.slice(1)
+      timeSlot.times.forEach((time) => {
+        formattedDates.push({
+          day: day,
+          time: time,
+        })
+      })
+    })
+
+    return formattedDates
   }
+
+  const availableStartDates = getAvailableStartDates()
 
   const handleSendMessage = (e) => {
     e.preventDefault()
     if (!newMessage.trim()) return
 
-    // Add message handling logic here
-    console.log("Sending message:", newMessage)
+    const newMsg = {
+      id: messages.length + 1,
+      text: newMessage,
+      sender: "user",
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    }
+
+    setMessages([...messages, newMsg])
     setNewMessage("")
   }
 
   const handleScheduleAndPay = () => {
-    // Add your payment logic here
-    // After successful payment:
     setIsEnrollmentSuccessOpen(true)
   }
 
   const handleContinueAfterEnrollment = () => {
     setIsEnrollmentSuccessOpen(false)
-    // Add any navigation or additional logic here
+    navigate("/dashboard/my-case")
   }
+
+  // Loading state
+  if (loading || !course) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading course details...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Calculate display values
+  const totalHours = course.duration ? `${course.duration} weeks` : "N/A"
+  const learnerCount = course.enrollmentCount || "0"
 
   return (
     <div className="min-h-screen bg-background">
@@ -145,13 +206,13 @@ function OneOnOneCourseDetailsPage() {
             <div>
               <h1 className="text-xl font-semibold">{course.title}</h1>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>₦ {course.price}</span>
+                <span>₦ {course.price?.toLocaleString()}</span>
                 <span>•</span>
-                <span>{course.learners} learners</span>
+                <span>{learnerCount} learners</span>
                 <span>•</span>
-                <span>{course.type}</span>
+                <span className="capitalize">{course.type?.replace("-", " ")}</span>
                 <span>•</span>
-                <span>{course.duration}</span>
+                <span>{totalHours}</span>
               </div>
             </div>
           </div>
@@ -165,19 +226,18 @@ function OneOnOneCourseDetailsPage() {
             {/* Video Player */}
             <div className="aspect-video bg-gray-900 rounded-lg relative">
               <video
-                src="/course-preview.mp4"
+                src={course.videoUrl || "/course-preview.mp4"}
                 controls
-                autoPlay
-                loop
-                muted // Remove this if you want sound
                 poster="/course-preview.jpg"
-                alt="Course Preview"
                 className="w-full h-full object-cover rounded-lg"
-              />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <button className="h-16 w-16 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">
+              >
+                <source src={course.videoUrl} type="video/mp4" />
+                Your browser does not support the video tag.
+              </video>
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="h-16 w-16 rounded-full bg-white/10 flex items-center justify-center">
                   <Play className="h-8 w-8 text-white" fill="currentColor" />
-                </button>
+                </div>
               </div>
             </div>
 
@@ -204,32 +264,82 @@ function OneOnOneCourseDetailsPage() {
               <div className="space-y-6">
                 <div>
                   <h2 className="text-lg font-semibold mb-4">About the course</h2>
-                  <p className="text-muted-foreground whitespace-pre-line">{course.description}</p>
+                  <p className="text-muted-foreground whitespace-pre-wrap">
+                    {isDescriptionExpanded 
+                      ? course.description 
+                      : course.description.length > 500 
+                        ? `${course.description.slice(0, 500)}...` 
+                        : course.description
+                    }
+                  </p>
+                  {course.description.length > 500 && (
+                    <button
+                      onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                      className="text-primary hover:underline mt-2"
+                    >
+                      {isDescriptionExpanded ? "Show less" : "Show more"}
+                    </button>
+                  )}
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <img src={course.instructor.avatar || "/placeholder.svg"} alt="" className="h-12 w-12 rounded-full" />
-                  <div>
-                    <h3 className="font-medium">{course.instructor.name}</h3>
-                    <div className="flex items-center gap-1">
-                      <div className="flex">
-                        {[...Array(5)].map((_, i) => (
-                          <Star
-                            key={i}
-                            className={`h-4 w-4 ${
-                              i < Math.floor(course.instructor.rating)
-                                ? "text-yellow-400 fill-yellow-400"
-                                : i < course.instructor.rating
-                                  ? "text-yellow-400 fill-yellow-400 opacity-50"
-                                  : "text-gray-300"
-                            }`}
-                          />
-                        ))}
-                      </div>
-                      <span className="text-sm text-muted-foreground">({course.instructor.reviews})</span>
+                {/* Course Details */}
+                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                  <h3 className="font-semibold mb-3">Course Information</h3>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Duration:</span>
+                      <span className="ml-2 font-medium">{course.duration} weeks</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Lessons:</span>
+                      <span className="ml-2 font-medium">{course.lessons?.length || 0}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Course Type:</span>
+                      <span className="ml-2 font-medium capitalize">{course.type?.replace("-", " ")}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Price:</span>
+                      <span className="ml-2 font-medium">₦{course.price?.toLocaleString()}</span>
                     </div>
                   </div>
                 </div>
+
+                {/* Instructor Info */}
+                <div className="flex items-center gap-3 p-4 border rounded-lg">
+                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-lg">
+                    {course.tutor?.email?.charAt(0).toUpperCase() || "T"}
+                  </div>
+                  <div>
+                    <h3 className="font-medium">Instructor</h3>
+                    <p className="text-sm text-muted-foreground">{course.tutor?.email || "Course Instructor"}</p>
+                  </div>
+                </div>
+
+                {/* Lessons Overview */}
+                {course.lessons && course.lessons.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold mb-3">Course Content</h3>
+                    <div className="space-y-3">
+                      {course.lessons.map((lesson, index) => (
+                        <div key={index} className="border rounded-lg p-4">
+                          <h4 className="font-medium mb-1">{lesson.title}</h4>
+                          <p className="text-sm text-muted-foreground mb-2">{lesson.description}</p>
+                          {lesson.resources && lesson.resources.length > 0 && (
+                            <div className="text-xs text-muted-foreground">
+                              {lesson.resources.length} resource{lesson.resources.length > 1 ? "s" : ""} available
+                            </div>
+                          )}
+                          {lesson.availableTimes && lesson.availableTimes.length > 0 && (
+                            <div className="mt-2 text-xs text-primary">
+                              Flexible scheduling available
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -240,15 +350,18 @@ function OneOnOneCourseDetailsPage() {
                 {/* Overall Rating */}
                 <div className="bg-gray-50 p-6 rounded-lg flex items-center gap-8">
                   <div className="text-center">
-                    <div className="text-4xl font-bold">4.5</div>
+                    <div className="text-4xl font-bold">{course.rating || "N/A"}</div>
                     <div className="flex">
                       {[...Array(5)].map((_, i) => (
                         <Star
                           key={i}
-                          className={`h-4 w-4 ${i < 4 ? "text-yellow-400 fill-yellow-400" : "text-gray-300"}`}
+                          className={`h-4 w-4 ${i < Math.floor(course.rating || 0) ? "text-yellow-400 fill-yellow-400" : "text-gray-300"}`}
                         />
                       ))}
                     </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {course.reviewCount || 0} review{course.reviewCount !== 1 ? "s" : ""}
+                    </p>
                   </div>
                   <div className="flex-1 space-y-2">
                     {[5, 4, 3, 2, 1].map((rating) => (
@@ -262,10 +375,12 @@ function OneOnOneCourseDetailsPage() {
 
                 {/* Reviews List */}
                 <div className="space-y-6">
-                  {reviews.map((review) => (
+                  {sampleReviews.map((review) => (
                     <div key={review.id} className="space-y-2">
                       <div className="flex items-center gap-2">
-                        <img src={review.avatar || "/placeholder.svg"} alt="" className="h-10 w-10 rounded-full" />
+                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                          <span className="text-primary font-semibold">{review.name.charAt(0)}</span>
+                        </div>
                         <div>
                           <div className="font-medium">{review.name}</div>
                           <div className="flex items-center gap-2">
@@ -292,9 +407,9 @@ function OneOnOneCourseDetailsPage() {
             )}
 
             {activeTab === "chat" && (
-              <div className="h-[600px] flex flex-col">
+              <div className="h-[600px] flex flex-col border rounded-lg">
                 {/* Messages */}
-                <div className="flex-1 overflow-y-auto space-y-4 pb-4">
+                <div className="flex-1 overflow-y-auto space-y-4 p-4">
                   {messages.map((message) => (
                     <div
                       key={message.id}
@@ -321,7 +436,7 @@ function OneOnOneCourseDetailsPage() {
                 </div>
 
                 {/* Message Input */}
-                <form onSubmit={handleSendMessage} className="flex items-center gap-2 pt-4 border-t">
+                <form onSubmit={handleSendMessage} className="flex items-center gap-2 p-4 border-t">
                   <button type="button" className="text-muted-foreground hover:text-foreground">
                     <Smile className="h-6 w-6" />
                   </button>
@@ -346,17 +461,23 @@ function OneOnOneCourseDetailsPage() {
             <div className="sticky top-6">
               <div className="bg-white rounded-lg border p-6 space-y-6">
                 <h3 className="text-primary font-medium">
-                  {activeTab === "details" ? "Available Start Dates" : "Date and Time"}
+                  {activeTab === "details" ? "Available Time Slots" : "Class Schedule"}
                 </h3>
 
                 {activeTab === "details" ? (
-                  <div className="space-y-6">
-                    {course.availableStartDates.map((slot, index) => (
-                      <div key={index} className="space-y-1">
-                        <div className="font-medium">{slot.date}</div>
-                        <div className="text-sm text-muted-foreground">{slot.time}</div>
-                      </div>
-                    ))}
+                  <div className="space-y-4">
+                    {availableStartDates.length > 0 ? (
+                      availableStartDates.map((slot, index) => (
+                        <div key={index} className="p-3 border rounded-lg hover:bg-gray-50 transition-colors">
+                          <div className="font-medium">{slot.day}</div>
+                          <div className="text-sm text-muted-foreground">{slot.time}</div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        No available time slots at the moment. Contact the instructor for scheduling.
+                      </p>
+                    )}
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -364,19 +485,19 @@ function OneOnOneCourseDetailsPage() {
                       <div
                         key={class_.id}
                         className={cn(
-                          "flex items-center justify-between p-3 rounded-lg",
-                          class_.completed && "bg-primary/10",
+                          "flex items-center justify-between p-3 rounded-lg border",
+                          class_.completed && "bg-primary/10 border-primary/20",
                         )}
                       >
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
-                            <span>{class_.id}.</span>
-                            <span>{class_.title}</span>
+                            <span className="font-medium">{class_.id}.</span>
+                            <span className="text-sm">{class_.title}</span>
                           </div>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Calendar className="h-4 w-4" />
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Calendar className="h-3 w-3" />
                             <span>{class_.date}</span>
-                            <Clock className="h-4 w-4 ml-2" />
+                            <Clock className="h-3 w-3 ml-2" />
                             <span>{class_.time}</span>
                           </div>
                         </div>
@@ -387,23 +508,25 @@ function OneOnOneCourseDetailsPage() {
                 )}
 
                 <Button 
-                className="w-full bg-black hover:bg-black/90" 
-                onClick={handleScheduleAndPay}
+                  className="w-full bg-black hover:bg-black/90" 
+                  onClick={handleScheduleAndPay}
+                  disabled={availableStartDates.length === 0}
                 >
-                  Schedule & Pay
+                  Schedule & Pay - ₦{course.price?.toLocaleString()}
                 </Button>
               </div>
             </div>
           </div>
         </div>
       </div>
+      
       <EnrollmentSuccessModal
         isOpen={isEnrollmentSuccessOpen}
         onClose={() => setIsEnrollmentSuccessOpen(false)}
         courseTitle={course.title}
-        date="12 Sept. 2024"
-        time="2 PM"
-        tutorName="Allison Igwe"
+        date={availableStartDates[0]?.day || "To be scheduled"}
+        time={availableStartDates[0]?.time || "Flexible"}
+        tutorName={course.tutor?.email || "Instructor"}
         onContinue={handleContinueAfterEnrollment}
       />
     </div>

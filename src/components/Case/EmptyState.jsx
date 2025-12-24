@@ -1,7 +1,9 @@
 import { Button } from "@/components/ui/button"
 import { FileSearch } from "lucide-react"
+import { useNavigate } from "react-router-dom";
 
 function EmptyState({ type, status, hasFilters, onClear }) {
+  const navigate = useNavigate();
   const getMessage = () => {
     if (hasFilters) {
       return {
@@ -41,6 +43,10 @@ function EmptyState({ type, status, hasFilters, onClear }) {
 
   const message = getMessage()
 
+  const handleClick = () => {
+    navigate(type === "gigs" ? "/dashboard/explore" : "/dashboard/explore")
+  }
+
   return (
     <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
       <div className="h-16 w-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
@@ -48,7 +54,8 @@ function EmptyState({ type, status, hasFilters, onClear }) {
       </div>
       <h3 className="text-xl font-semibold mb-2">{message.title}</h3>
       <p className="text-muted-foreground max-w-md mb-6">{message.description}</p>
-      <Button onClick={hasFilters ? onClear : undefined}>{message.action}</Button>
+      {/* <Button onClick={hasFilters ? onClear : undefined}>{message.action}</Button> */}
+      <Button onClick={handleClick} variant="outline">{message.action}</Button>
     </div>
   )
 }

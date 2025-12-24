@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import AuthLayout from "@/components/Authentication/AuthLayout"
+import useUserStore from "@/store/userStore"
 
 // Sample countries data
 const countries = [
@@ -15,6 +16,7 @@ const countries = [
 ]
 
 function IdentityVerification() {
+  const { updateProfile,  loading } = useUserStore()
   const navigate = useNavigate()
   const [formData, setFormData] = useState({
     nationality: "",
@@ -22,10 +24,19 @@ function IdentityVerification() {
     address: "",
   })
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    // Add your verification logic here
-    navigate("/document-verification")
+    try {
+      await updateProfile({
+        dob: formData.dateOfBirth,
+        address: formData.address,
+        nationality: formData.nationality,
+      })
+      navigate("/document-verification")
+    } catch (err) {
+      console.error("Failed to update profile", err)
+      // handle error (e.g., show a toast) as needed
+    }
   }
 
   const handleSkip = () => {
@@ -112,7 +123,11 @@ function IdentityVerification() {
 
           {/* Action Buttons */}
           <div className="flex gap-4">
-            <Button type="submit" className="flex-1 bg-black hover:bg-black/90">
+            <Button 
+            type="submit" 
+            className="flex-1 bg-black hover:bg-black/90"
+            disabled={loading}       
+            >
               Continue
             </Button>
             <Button type="button" variant="secondary" className="flex-1" onClick={handleSkip}>

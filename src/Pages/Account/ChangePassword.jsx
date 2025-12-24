@@ -3,13 +3,18 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Eye, EyeOff } from "lucide-react"
 import CustomButton from "@/components/CustomButton"
+import useAuthStore from "@/store/authStore"
+import { toast } from "sonner"
 
 function ChangePassword() {
+  const { changePassword, loading } = useAuthStore()
   const [passwords, setPasswords] = useState({
     current: "",
     new: "",
     confirm: "",
   })
+
+  const [errors, setErrors] = useState({})
 
   const [showPassword, setShowPassword] = useState({
     current: false,
@@ -30,12 +35,78 @@ function ChangePassword() {
       ...prev,
       [name]: value,
     }))
+
+    // clear error for this field when user starts typing
+    if (errors[name]) {
+      setErrors((prev) => ({
+        ...prev,
+        [name]: "",
+      }))
+    }
   }
 
-  const handleSubmit = (e) => {
+  const validateForm = () => {
+    const newErrors = {}
+
+    if (!passwords.current) {
+      newErrors.current = "Current password is required"
+    }
+
+    if (!passwords.new) {
+      newErrors.new = "New password is required"
+    } else if (passwords.new.length < 8) {
+      newErrors.new = "Password must be at least 8 characters"
+    }
+
+    if (!passwords.confirm) {
+      newErrors.confirm = "Please confirm your new password"
+    } else if (passwords.new !== passwords.confirm) {
+      newErrors.confirm = "Passwords do not match"
+    }
+
+    if (passwords.current === passwords.new) {
+      newErrors.new = "New password must be different from current password"
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    // Add password change logic here
-    console.log("Changing password:", passwords)
+
+    if (!validateForm()) return
+    
+    try {
+      const payload = {
+        currentPassword: passwords.current,
+        newPassword: passwords.new,
+        confirmPassword: passwords.confirm,
+      }
+
+      await changePassword(payload)
+
+      // reset form on success
+      setPasswords({
+        current: "",
+        new: "",
+        confirm: "",
+      })
+      setErrors({})
+      toast.success("Password changed successfully")
+    } catch (err) {
+      console.error("Change password error:", err)
+      const msg = err?.response?.data?.message || "Failed to change password"
+      toast.error(msg)
+
+      // handle field-specific errors from backend
+      if (err?.response?.data?.errors && typeof err.response.data.errors === "object") {
+        setErrors((prev) => ({
+          ...prev,
+          ...err.response.data.errors,
+        }))
+      }
+    }
   }
 
   return (
@@ -66,6 +137,7 @@ function ChangePassword() {
                 {showPassword.current ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
+            {errors.current && <p className="text-sm text-red-500">{errors.current}</p>}
           </div>
 
           {/* New Password */}
@@ -87,6 +159,7 @@ function ChangePassword() {
                 {showPassword.new ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
+            {errors.new && <p className="text-sm text-red-500">{errors.new}</p>}
           </div>
 
           {/* Confirm New Password */}
@@ -109,10 +182,16 @@ function ChangePassword() {
               </button>
             </div>
           </div>
+          {errors.confirm && <p className="text-sm text-red-500">{errors.confirm}</p>}
         </div>
 
-        <CustomButton size={"lg"} type="submit" className="w-full bg-black hover:bg-black/90 mt-8">
-          Save
+        <CustomButton 
+        disabled={loading} 
+        size={"lg"} 
+        type="submit" 
+        className="w-full bg-black hover:bg-black/90 mt-8"
+        >
+          {loading ? "Saving..." : "Save"}
         </CustomButton>
       </form>
     </div>

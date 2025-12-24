@@ -5,20 +5,47 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import CustomButton from "@/components/CustomButton"
-
+import useUserStore from "@/store/userStore"
+import { toast } from "sonner"
+import { useEffect } from "react"
 function EditProfile() {
+  const { user, changeProfile, loading } = useUserStore()
   const {
     register,
     handleSubmit,
     setValue,
+    setError,
     formState: { errors },
   } = useForm({
     defaultValues: {
-      firstName: "Abayomi",
-      lastName: "Olowu",
-      email: "abayomiolowu@Giggerz.com",
+      firstName: "",
+      lastName: "",
+      otherName: "",
+      dob: "",
+      nationality: "",
+      phone: "",
+      email: "",
+      bio: "",
+      profileImageUrl: "",
+      profileImagePublicId: "",
     },
   })
+
+  // populate form values when user available
+  useEffect(() => {
+    console.log("Populating form with user data:", user)
+    if (!user) return
+    setValue("firstName", user?.firstname || user?.firstName || "")
+    setValue("lastName", user?.lastname || user?.lastName || "")
+    setValue("otherName", user?.othername || user?.otherName || "")
+    setValue("dob", user?.dob || "")
+    setValue("nationality", user?.nationality || "")
+    setValue("phone", user?.phone || "")
+    setValue("email", user?.email || "")
+    setValue("bio", user?.bio || "")
+    setValue("profileImageUrl", user?.profileImage?.url || "")
+    setValue("profileImagePublicId", user?.profileImage?.publicId || "")
+  }, [user, setValue])
 
   const validateForm = (data) => {
     const newErrors = {}
@@ -42,15 +69,51 @@ function EditProfile() {
     return newErrors
   }
 
-  const onSubmit = (data) => {
+  const onSubmit = async(data) => {
     const validationErrors = validateForm(data)
 
-    if (Object.keys(validationErrors).length === 0) {
-      console.log(data)
-      // Add your form submission logic here
-    } else {
-      // Handle validation errors
-      console.log("Validation errors:", validationErrors)
+    if (Object.keys(validationErrors).length > 0) {
+      // apply validation errors to react-hook-form
+      Object.entries(validationErrors).forEach(([k, v]) => setError(k, { type: "manual", message: v }))
+      return
+    }
+
+    const payload = {
+      profileImage: {
+        url: data.profileImageUrl || "",
+        publicId: data.profileImagePublicId || "",
+      },
+      firstname: data.firstName,
+      lastname: data.lastName,
+      othername: data.otherName || "",
+      dob: data.dob || "",
+      nationality: data.nationality || "",
+      phone: data.phone,
+      email: data.email,
+      bio: data.bio || "",
+    }
+
+    try {
+      await changeProfile(payload)
+      //toast.success("Profile updated successfully!")
+    } catch (err) {
+      const msg = err?.response?.data?.message || "Failed to update profile"
+      toast.error(msg)
+      const fieldErrors = err?.response?.data?.errors
+      if (fieldErrors && typeof fieldErrors === "object") {
+        Object.entries(fieldErrors).forEach(([key, value]) => {
+          // map server keys to form keys if necessary
+          const formKey = {
+            firstname: "firstName",
+            lastname: "lastName",
+            othername: "otherName",
+            phone: "phone",
+            email: "email",
+            bio: "bio",
+          }[key] || key
+          setError(formKey, { type: "server", message: Array.isArray(value) ? value.join(", ") : value })
+        })
+      }
     }
   }
 
@@ -65,9 +128,16 @@ function EditProfile() {
         {/* Profile Picture */}
         <div className="flex justify-left mb-6">
           <Avatar className="h-24 w-24">
-            <AvatarImage src="/avatar.jpeg" />
-            <AvatarFallback>AO</AvatarFallback>
+            <AvatarImage src={user?.profileImage?.url || "/avatar.jpeg"} />
+            <AvatarFallback>{(user?.firstname?.[0] || "A") + (user?.lastname?.[0] || "O")}</AvatarFallback>
           </Avatar>
+
+          <div className="flex-1 space-y-2">
+            <label className="text-sm font-medium block">Profile image URL</label>
+            <Input placeholder="https://..." {...register("profileImageUrl")} />
+            <label className="text-sm font-medium block mt-2">Profile image publicId</label>
+            <Input placeholder="users/profile_12345" {...register("profileImagePublicId")} />
+          </div>
         </div>
 
         {/* Form Fields */}
@@ -92,7 +162,7 @@ function EditProfile() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
+            {/* <div className="space-y-2">
               <label className="text-sm font-medium">Age</label>
               <Select onValueChange={(value) => setValue("age", value)}>
                 <SelectTrigger>
@@ -120,8 +190,18 @@ function EditProfile() {
                   <SelectItem value="other">Other</SelectItem>
                 </SelectContent>
               </Select>
+            </div> */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Date of birth</label>
+              <Input type="date" {...register("dob")} />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nationality</label>
+              <Input placeholder="e.g. Nigerian" {...register("nationality")} />
             </div>
           </div>
+          
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Phone number</label>
@@ -142,7 +222,7 @@ function EditProfile() {
         </div>
 
         <CustomButton size={'lg'} type="submit" className="w-full rounded-full bg-black hover:bg-black/90">
-          Save
+          {loading ? "Saving..." : "Save"}
         </CustomButton>
       </form>
     </div>

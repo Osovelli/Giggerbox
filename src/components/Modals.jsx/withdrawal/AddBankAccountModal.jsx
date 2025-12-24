@@ -1,25 +1,31 @@
 import { useState } from "react"
 import { X } from "lucide-react"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import BankAccountSuccessModal from "./BankAccountSuccessModal"
+import useWalletStore from "@/store/walletStore"
 
 // Sample banks
 const banks = [
-  { id: "access", name: "Access Bank" },
-  { id: "gtb", name: "Guaranty Trust Bank" },
-  { id: "firstbank", name: "First Bank" },
-  { id: "zenith", name: "Zenith Bank" },
-  { id: "uba", name: "United Bank for Africa" },
+  { id: "access", name: "Access Bank", code: "044" },
+  { id: "gtb", name: "Guaranty Trust Bank", code: "058" },
+  { id: "firstbank", name: "First Bank", code: "011" },
+  { id: "zenith", name: "Zenith Bank", code: "057" },
+  { id: "uba", name: "United Bank for Africa", code: "033" },
 ]
 
 function AddBankAccountModal({ isOpen, onClose, onSuccess }) {
+  const {addBankAccount, validateBankAccount, loading} = useWalletStore()
   const [bankDetails, setBankDetails] = useState({
-    bank: "",
+    bankId: "",         // selected bank id from `banks`
+    bankCode: "",       // optional manual override
+    bankName: "",       // optional manual override
     accountNumber: "",
+    accountName: "",
   })
+  
   const [errors, setErrors] = useState({})
   const [isProcessing, setIsProcessing] = useState(false)
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false)
@@ -39,11 +45,11 @@ function AddBankAccountModal({ isOpen, onClose, onSuccess }) {
     }
   }
 
-  const validateForm = () => {
+ const validateForm = () => {
     const newErrors = {}
 
-    if (!bankDetails.bank) {
-      newErrors.bank = "Please select a bank"
+    if (!bankDetails.bankId && !bankDetails.bankName) {
+      newErrors.bankId = "Please select a bank"
     }
 
     if (!bankDetails.accountNumber) {
@@ -52,31 +58,67 @@ function AddBankAccountModal({ isOpen, onClose, onSuccess }) {
       newErrors.accountNumber = "Account number must be 10 digits"
     }
 
+    if (!bankDetails.accountName) {
+      newErrors.accountName = "Please enter account name"
+    }
+
+    // derive bankCode if bank selected
+    const bankObj = banks.find((b) => b.id === bankDetails.bankId)
+    if (!bankObj && !bankDetails.bankCode) {
+      newErrors.bankCode = "Bank code is required"
+    }
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validateForm()) return
 
     setIsProcessing(true)
 
-    // Simulate API call to verify account
-    setTimeout(() => {
-      setIsProcessing(false)
+    try {
+      const bankObj = banks.find((b) => b.id === bankDetails.bankId) || {}
 
-      // In a real app, you would get the account name from the API
+      const payload = {
+        bankName: bankObj.name || bankDetails.bankName,
+        bankCode: bankObj.code || bankDetails.bankCode,
+        accountNumber: bankDetails.accountNumber,
+        accountName: bankDetails.accountName,
+      }
+
+      // Step 1: Add bank account
+      const res = await addBankAccount(payload)
+
+      // Add a small delay between calls
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+
+      // Step 2: Validate the bank account
+      /* await validateBankAccount({
+        bankCode: payload.bankCode,
+        accountNumber: payload.accountNumber,
+      }) */
+
+      // Step 3: If both successful, open success modal
       const fullBankDetails = {
-        ...bankDetails,
-        accountName: "Olowu Abayomi",
-        bankName: banks.find((b) => b.id === bankDetails.bank)?.name || bankDetails.bank,
+        bankId: bankDetails.bankId,
+        bankName: payload.bankName,
+        bankCode: payload.bankCode,
+        accountNumber: bankDetails.accountNumber,
+        accountName: bankDetails.accountName,
+        ...(res?.data ? { serverResponse: res.data } : {}),
       }
 
       setIsSuccessModalOpen(true)
-
-      // Pass the bank details to the parent component
-      onSuccess(fullBankDetails)
-    }, 1500)
+      if (onSuccess) onSuccess(fullBankDetails)
+      setIsProcessing(false)
+    } catch (err) {
+      console.error("Add bank account error:", err)
+      setIsProcessing(false)
+      /* const msg = err?.response?.data?.message || "Failed to add bank account"
+      toast.error(msg)
+      if (err?.response?.data?.errors) setErrors(err.response.data.errors) */
+    }
   }
 
   return (
@@ -85,20 +127,28 @@ function AddBankAccountModal({ isOpen, onClose, onSuccess }) {
         <DialogContent className="sm:max-w-md p-0">
           <div className="p-6">
             <div className="flex items-center justify-between mb-2">
-              <h2 className="text-xl font-bold">Add Bank Account</h2>
+              <DialogTitle className="text-xl font-bold">Add Bank Account</DialogTitle>
               {/* <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
                 <X className="h-5 w-5" />
               </button> */}
             </div>
 
-            <p className="text-gray-600 mb-6">Please fill in the bank account information</p>
+            <DialogDescription className="text-gray-600 mb-6">Please fill in the bank account information</DialogDescription>
 
             <div className="space-y-6">
               {/* Bank Selection */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">Bank</label>
-                <Select value={bankDetails.bank} onValueChange={(value) => handleChange("bank", value)}>
-                  <SelectTrigger className={errors.bank ? "border-red-500" : ""}>
+                <Select value={bankDetails.bankId} onValueChange={(value) => {
+                  handleChange("bankId", value)
+                  // populate derived fields when selecting a bank
+                  const b = banks.find((bn) => bn.id === value)
+                  if (b) {
+                    handleChange("bankCode", b.code)
+                    handleChange("bankName", b.name)
+                  }
+                }}>
+                  <SelectTrigger className={errors.bankId ? "border-red-500" : ""}>
                     <SelectValue placeholder="Select bank" />
                   </SelectTrigger>
                   <SelectContent>
@@ -109,7 +159,7 @@ function AddBankAccountModal({ isOpen, onClose, onSuccess }) {
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.bank && <p className="text-sm text-red-500">{errors.bank}</p>}
+                {errors.bankId && <p className="text-sm text-red-500">{errors.bankId}</p>}
               </div>
 
               {/* Account Number */}
@@ -123,6 +173,43 @@ function AddBankAccountModal({ isOpen, onClose, onSuccess }) {
                 />
                 {errors.accountNumber && <p className="text-sm text-red-500">{errors.accountNumber}</p>}
               </div>
+
+              {/* Account Name */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Account name</label>
+                <Input
+                  placeholder="John Doe"
+                  value={bankDetails.accountName}
+                  onChange={(e) => handleChange("accountName", e.target.value)}
+                  className={errors.accountName ? "border-red-500" : ""}
+                />
+                {errors.accountName && <p className="text-sm text-red-500">{errors.accountName}</p>}
+              </div>
+
+              {/* Bank Code (shows derived code but editable) */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Bank code</label>
+                <Input
+                  placeholder="e.g. 058"
+                  value={bankDetails.bankCode}
+                  onChange={(e) => handleChange("bankCode", e.target.value)}
+                  className={errors.bankCode ? "border-red-500" : ""}
+                />
+                {errors.bankCode && <p className="text-sm text-red-500">{errors.bankCode}</p>}
+              </div>
+
+              {/* Routing Number */}
+              {/* <div className="space-y-2">
+                <label className="text-sm font-medium">Routing number</label>
+                <Input
+                  placeholder="Enter routing number"
+                  value={bankDetails.routingNumber}
+                  onChange={(e) => handleChange("routingNumber", e.target.value)}
+                  className={errors.routingNumber ? "border-red-500" : ""}
+                />
+                {errors.routingNumber && <p className="text-sm text-red-500">{errors.routingNumber}</p>}
+              </div> */}
+
 
               <Button className="w-full bg-black hover:bg-black/90" onClick={handleSubmit} disabled={isProcessing}>
                 {isProcessing ? "Verifying..." : "Continue"}

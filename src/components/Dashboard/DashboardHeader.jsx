@@ -6,6 +6,7 @@ import { useState } from "react"
 import ProfileSheet from "../PeofileSheet"
 import NotificationSheet from "../NotificationSheet"
 import MessagesSheet from "../MessageSheet"
+import { useNavigate } from "react-router-dom"
 
   // Sample notifications data
   const sampleNotifications = [
@@ -142,6 +143,8 @@ function DashboardHeader() {
   const [isMessagesOpen, setIsMessagesOpen] = useState(false)
   const [messages, setMessages] = useState(sampleMessages)
 
+  const navigate = useNavigate()
+
   const unreadCount = notifications.filter((n) => n.unread).length
 
   const unreadMessages = messages.filter((m) => m.unread).length
@@ -177,10 +180,10 @@ function DashboardHeader() {
 
   return (
     <>
-    <header className="sticky top-0 z-40 bg-white border-b">
+    <header className="sticky top-0 z-40 bg-white shadow-sm border-b">
       <div className="px-6 h-16 flex items-center justify-between gap-4">
         {/* Search */}
-        <div className="flex-1 max-w-xl">
+        <div className="flex-1 max-w-xl ml-14 lg:ml-0 hidden md:block">
           <CustomInput 
           type="search" 
           placeholder="Search" 
@@ -188,8 +191,15 @@ function DashboardHeader() {
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-2">
-          <CustomButton variant="ghost" size="icon" className="relative">
+        <div className="flex items-center gap-2 ml-24 md:ml-0">
+          <CustomButton 
+          variant="ghost" 
+          size="icon" 
+          className="relative"
+          onClick={() => {
+            navigate("/dashboard/wallet")
+          }}
+          >
             <Wallet className="h-5 w-5" />
             <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full" />
           </CustomButton>

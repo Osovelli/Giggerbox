@@ -10,75 +10,8 @@ import GigApplicationItem from "@/components/Case/GigApplicationItem"
 import EmptyState from "@/components/Case/EmptyState"
 import FilterDrawer from "@/components/Case/FilterDrawer"
 import { useUserRole } from "../hooks/useUserRole"
-
-// Sample data for gigs (as a poster)
-const postedGigsData = [
-  {
-    id: 1,
-    title: "Design Company Profile",
-    description:
-      "Creating user-centered designs by understanding business requirements, and user feedback. Creating user flows, wireframes, prototypes and mockups. Translating requirements into style guides, design systems, design patterns and attractive user interfaces",
-    price: 120000,
-    createdDays: 2,
-    status: "ongoing",
-    tags: ["UX Design", "Graphics Design", "Product Design"],
-    applicants: 12,
-    deadline: "2023-04-22",
-    location: "Remote",
-  },
-  {
-    id: 2,
-    title: "Website Development",
-    description:
-      "Developing a responsive website using modern technologies. Implementing user interface components and integrating with backend services. Ensuring cross-browser compatibility and optimizing for performance.",
-    price: 250000,
-    createdDays: 3,
-    status: "ongoing",
-    tags: ["Web Development", "Frontend", "React"],
-    applicants: 8,
-    deadline: "2023-05-10",
-    location: "Remote",
-  },
-  {
-    id: 3,
-    title: "Virtual Assistance for Data Entry and Scheduling Tasks",
-    description:
-      "Provide virtual assistance for data entry, scheduling, and administrative tasks. Manage calendars, organize meetings, and handle correspondence.",
-    price: 120000,
-    createdDays: 5,
-    status: "ongoing",
-    tags: ["Virtual Assistant", "Data Entry", "Administrative"],
-    applicants: 19,
-    deadline: "2023-04-22",
-    location: "Remote",
-  },
-  {
-    id: 4,
-    title: "Logo Design",
-    description:
-      "Creating a unique and memorable logo for a brand. Developing brand identity guidelines and assets. Providing multiple iterations and revisions.",
-    price: 80000,
-    createdDays: 7,
-    status: "completed",
-    tags: ["Logo Design", "Branding", "Graphics Design"],
-    applicants: 15,
-    deadline: "2023-03-15",
-    location: "Remote",
-  },
-  {
-    id: 5,
-    title: "Content Writing",
-    description:
-      "Writing engaging and SEO-friendly content for a website. Researching topics and keywords. Editing and proofreading content.",
-    price: 60000,
-    createdDays: 10,
-    status: "completed",
-    tags: ["Content Writing", "SEO", "Copywriting"],
-    applicants: 6,
-    deadline: "2023-03-01",
-    location: "Remote",
-  },
-]
+import useGigStore from "@/store/gigStore"
+import useCourseStore from "@/store/courseStore"
 
 // Sample data for gig applications (as a worker)
 const gigApplicationsData = [
@@ -160,66 +93,11 @@ const gigApplicationsData = [
   },
 ]
 
-// Sample data for courses
-const coursesData = [
-  {
-    id: 1,
-    title: "Google Data Analytics Course",
-    description:
-      "Learn data analytics with Google's comprehensive course. Master data collection, analysis, and visualization techniques.",
-    instructor: "John Smith",
-    progress: 75,
-    startDate: "2023-10-15",
-    endDate: "2023-12-15",
-    status: "ongoing",
-    type: "Self-paced",
-    image: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Home%20%2811%29-aj8UrZZroCsyEqdIb1MXyZH1rl0aUN.png",
-  },
-  {
-    id: 2,
-    title: "UX Design Fundamentals",
-    description:
-      "Master the fundamentals of UX design. Learn user research, wireframing, prototyping, and usability testing.",
-    instructor: "Sarah Johnson",
-    progress: 45,
-    startDate: "2023-09-20",
-    endDate: "2023-11-20",
-    status: "ongoing",
-    type: "1-on-1",
-    image: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Home%20%2811%29-aj8UrZZroCsyEqdIb1MXyZH1rl0aUN.png",
-  },
-  {
-    id: 3,
-    title: "Advanced JavaScript",
-    description:
-      "Take your JavaScript skills to the next level. Learn advanced concepts like closures, prototypes, and async programming.",
-    instructor: "Michael Brown",
-    progress: 90,
-    startDate: "2023-08-10",
-    endDate: "2023-10-10",
-    status: "ongoing",
-    type: "Self-paced",
-    image: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Home%20%2811%29-aj8UrZZroCsyEqdIb1MXyZH1rl0aUN.png",
-  },
-  {
-    id: 4,
-    title: "Digital Marketing Essentials",
-    description:
-      "Learn the essentials of digital marketing. Master SEO, social media marketing, email marketing, and more.",
-    instructor: "Emily Davis",
-    progress: 100,
-    startDate: "2023-07-05",
-    endDate: "2023-09-05",
-    status: "completed",
-    type: "1-on-1",
-    image: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Home%20%2811%29-aj8UrZZroCsyEqdIb1MXyZH1rl0aUN.png",
-  },
-]
-
 function MyCasePage() {
   // Get user role from custom hook
   const { userRole, setUserRole } = useUserRole()
-
+  const { getMyGigs, myGigs, loading: gigsLoading } = useGigStore()
+  const { fetchUserCourses, userCourses, loading: coursesLoading } = useCourseStore()
   const [activeView, setActiveView] = useState("gigs")
   const [activeStatus, setActiveStatus] = useState("ongoing")
   const [searchQuery, setSearchQuery] = useState("")
@@ -234,9 +112,114 @@ function MyCasePage() {
     applicationStatus: [],
   })
 
+  useEffect(() => {
+    // Fetch user's gigs when component mounts
+    getMyGigs()
+  }, [getMyGigs])
+
+  useEffect(() => {
+    // Fetch user's courses when component mounts
+    fetchUserCourses()
+  }, [fetchUserCourses])
+
   // For demo purposes, allow toggling between roles
   const toggleRole = () => {
     setUserRole(userRole === "poster" ? "worker" : "poster")
+  }
+
+  // Transform API gig data to match component structure
+  const transformGigData = (apiGigs) => {
+    if (!Array.isArray(apiGigs)) return []
+    
+    return apiGigs.map((gig) => {
+      // Calculate days since creation
+      const createdDate = new Date(gig.createdAt)
+      const today = new Date()
+      const daysDiff = Math.floor((today - createdDate) / (1000 * 60 * 60 * 24))
+      
+      // Map API status to component status
+      const getStatusFromApiStatus = (apiStatus) => {
+        switch (apiStatus?.toLowerCase()) {
+          case 'open':
+          case 'active':
+            return 'ongoing'
+          case 'in-progress':
+            return 'ongoing'
+          case 'completed':
+            return 'completed'
+          case 'closed':
+          case 'cancelled':
+            return 'completed'
+          default:
+            return 'ongoing'
+        }
+      }
+
+      return {
+        id: gig._id,
+        title: gig.title,
+        description: gig.description,
+        price: gig.budget,
+        createdDays: daysDiff,
+        status: getStatusFromApiStatus(gig.status),
+        tags: gig.requiredSkills || [],
+        applicants: gig.applicantsCount || 0,
+        deadline: gig.deadline || null,
+        location: gig.location || "Remote",
+        category: gig.category,
+        maxHires: gig.maxHires,
+        currency: gig.currency || "NGN",
+        images: gig.images || [],
+        attachments: gig.attachments || [],
+        createdAt: gig.createdAt,
+        updatedAt: gig.updatedAt,
+        apiStatus: gig.status, // Keep original status for reference
+      }
+    })
+  }
+
+  // Transform API course data to match component structure
+  const transformCourseData = (apiCourses) => {
+    if (!Array.isArray(apiCourses)) return []
+    
+    return apiCourses.map((course) => {
+      // Calculate course status based on dates or progress
+      const getCourseStatus = () => {
+        if (course.progress === 100 || course.status === 'completed') {
+          return 'completed'
+        }
+        if (course.status === 'ongoing' || course.progress > 0) {
+          return 'ongoing'
+        }
+        // Check if course has started based on createdAt
+        const startDate = new Date(course.enrolledAt || course.createdAt)
+        const today = new Date()
+        if (startDate <= today) {
+          return 'ongoing'
+        }
+        return 'ongoing'
+      }
+
+      return {
+        id: course._id,
+        title: course.title,
+        description: course.description,
+        instructor: course.tutor?.email || course.tutor?.name || "Instructor",
+        progress: course.progress || 0,
+        startDate: course.enrolledAt || course.createdAt,
+        endDate: course.endDate || null,
+        status: getCourseStatus(),
+        type: course.type === "one-on-one" ? "1-on-1" : "Self-paced",
+        image: course.videoUrl || course.thumbnail || "/placeholder.svg",
+        price: course.price || 0,
+        duration: course.duration,
+        lessons: course.lessons || [],
+        tutorId: course.tutor?._id,
+        tutorEmail: course.tutor?.email,
+        slug: course.slug,
+        availableTimes: course.availableTimes || [],
+      }
+    })
   }
 
   // Get the appropriate data based on user role and active view
@@ -244,10 +227,24 @@ function MyCasePage() {
     let data
 
     if (userRole === "poster") {
-      data = activeView === "gigs" ? postedGigsData : coursesData
+      if (activeView === "gigs") {
+        // Use transformed myGigs data from store
+        const transformedGigs = transformGigData(myGigs || [])
+        data = transformedGigs
+      } else {
+        // Use transformed userCourses data from store
+        const transformedCourses = transformCourseData(userCourses || [])
+        data = transformedCourses
+      }
     } else {
       // Worker role
-      data = activeView === "gigs" ? gigApplicationsData : coursesData
+      if (activeView === "gigs") {
+        data = gigApplicationsData
+      } else {
+        // Use transformed userCourses data from store for workers too
+        const transformedCourses = transformCourseData(userCourses || [])
+        data = transformedCourses
+      }
     }
 
     return data.filter((item) => {
@@ -264,8 +261,8 @@ function MyCasePage() {
       // Filter by search query
       if (
         searchQuery &&
-        !item.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
-        !item.description.toLowerCase().includes(searchQuery.toLowerCase())
+        !item.title?.toLowerCase().includes(searchQuery.toLowerCase()) &&
+        !item.description?.toLowerCase().includes(searchQuery.toLowerCase())
       ) {
         return false
       }
@@ -278,7 +275,13 @@ function MyCasePage() {
       // Filter by date range
       if (filters.dateRange) {
         const today = new Date()
-        const itemDate = new Date(item.appliedDate || new Date(today.setDate(today.getDate() - item.createdDays)))
+        const itemDate = new Date(
+          item.appliedDate || 
+          item.enrolledAt || 
+          item.startDate || 
+          item.createdAt || 
+          new Date(today.setDate(today.getDate() - (item.createdDays || 0)))
+        )
         const daysDiff = Math.floor((today - itemDate) / (1000 * 60 * 60 * 24))
 
         if (filters.dateRange === "last7days" && daysDiff > 7) return false
@@ -287,7 +290,7 @@ function MyCasePage() {
       }
 
       // Filter by price range
-      if ((filters.priceRange.min || filters.priceRange.max) && item.price) {
+      if ((filters.priceRange.min || filters.priceRange.max) && item.price !== undefined) {
         if (filters.priceRange.min && item.price < Number.parseInt(filters.priceRange.min)) return false
         if (filters.priceRange.max && item.price > Number.parseInt(filters.priceRange.max)) return false
       }
@@ -373,6 +376,9 @@ function MyCasePage() {
     }
   }
 
+  // Check if currently loading
+  const isLoading = (activeView === "gigs" ? gigsLoading : coursesLoading)
+
   return (
     <div className="container mx-auto px-4 py-8">
       {/* For demo purposes only - toggle between roles */}
@@ -388,7 +394,7 @@ function MyCasePage() {
       </div>
 
       {/* View Toggle */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center mb-6 gap-4 flex-wrap">
         <div className="flex space-x-2">
           <Button
             variant={activeView === "gigs" ? "default" : "outline"}
@@ -405,13 +411,13 @@ function MyCasePage() {
             Courses
           </Button>
         </div>
-        <div className="flex gap-2">
-          <div className="relative flex-1">
+        <div className="flex gap-2 flex-wrap">
+          <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
               placeholder="Search"
-              className="pl-10"
+              className="pl-10 w-[200px]"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -432,15 +438,15 @@ function MyCasePage() {
               Clear
             </Button>
           )}
-        {userRole === "poster" && activeView === "gigs" && (
-          <Button onClick={() => (window.location.href = "/dashboard/post-gig")} className="bg-black hover:bg-black/90">
-            Post a Gig
-          </Button>
-        )}
+          {userRole === "poster" && activeView === "gigs" && (
+            <Button onClick={() => (window.location.href = "/dashboard/post-gig")} className="bg-black hover:bg-black/90">
+              Post a Gig
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* Status Tabs and Search */}
+      {/* Status Tabs and Content */}
       <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
         <Tabs defaultValue={activeStatus} onValueChange={setActiveStatus} className="w-full">
           <TabsList className="grid max-w-sm grid-cols-2">
@@ -451,50 +457,55 @@ function MyCasePage() {
               {userRole === "worker" && activeView === "gigs" ? "History" : "Completed"}
             </TabsTrigger>
           </TabsList>
-            {/* Content */}
-            <div className="space-y-6">
-                <TabsContent value={activeStatus} className="mt-0">
-                {paginatedData.length > 0 ? (
-                    <div className="space-y-6">
-                    {paginatedData.map((item) => {
-                        if (activeView === "courses") {
-                        return <CourseItem key={item.id} course={item} />
-                        } else if (userRole === "poster") {
-                        return <GigPosterItem key={item.id} gig={item} />
-                        } else {
-                        return <GigApplicationItem key={item.id} application={item} />
-                        }
-                    })}
-                    </div>
-                ) : (
-                    <EmptyState
-                    type={activeView === "gigs" ? (userRole === "poster" ? "gigs" : "applications") : "courses"}
-                    status={activeStatus}
-                    userRole={userRole}
-                    hasFilters={
-                        searchQuery ||
-                        filters.dateRange ||
-                        filters.priceRange.min ||
-                        filters.priceRange.max ||
-                        filters.categories.length > 0 ||
-                        filters.types.length > 0 ||
-                        filters.applicationStatus.length > 0
+          
+          {/* Content */}
+          <div className="space-y-6 mt-6">
+            <TabsContent value={activeStatus} className="mt-0">
+              {isLoading ? (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">Loading...</p>
+                </div>
+              ) : paginatedData.length > 0 ? (
+                <div className="space-y-6">
+                  {paginatedData.map((item) => {
+                    if (activeView === "courses") {
+                      return <CourseItem key={item.id} course={item} />
+                    } else if (userRole === "poster") {
+                      return <GigPosterItem key={item.id} gig={item} />
+                    } else {
+                      return <GigApplicationItem key={item.id} application={item} />
                     }
-                    onClear={clearFilters}
-                    />
-                )}
-                </TabsContent>
-            </div>
+                  })}
+                </div>
+              ) : (
+                <EmptyState
+                  type={activeView === "gigs" ? (userRole === "poster" ? "gigs" : "applications") : "courses"}
+                  status={activeStatus}
+                  userRole={userRole}
+                  hasFilters={
+                    searchQuery ||
+                    filters.dateRange ||
+                    filters.priceRange.min ||
+                    filters.priceRange.max ||
+                    filters.categories.length > 0 ||
+                    filters.types.length > 0 ||
+                    filters.applicationStatus.length > 0
+                  }
+                  onClear={clearFilters}
+                />
+              )}
+            </TabsContent>
+          </div>
         </Tabs>
       </div>
 
       {/* Pagination */}
-      {paginatedData.length > 0 && (
-        <div className="flex items-center justify-between mt-8">
+      {paginatedData.length > 0 && totalPages > 1 && (
+        <div className="flex items-center justify-between mt-8 flex-wrap gap-4">
           <div className="text-sm text-muted-foreground">
             Page {currentPage} of {totalPages}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Button
               variant="outline"
               size="icon"

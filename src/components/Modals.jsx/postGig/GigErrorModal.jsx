@@ -1,7 +1,7 @@
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 
-function GigErrorModal({ isOpen, onClose, onFundWallet, onRetry }) {
+function GigErrorModal({ isOpen, onClose, onFundWallet, onRetry, onError }) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md p-6 flex flex-col items-center text-center">
@@ -15,8 +15,11 @@ function GigErrorModal({ isOpen, onClose, onFundWallet, onRetry }) {
         </div>
 
         <h2 className="text-xl font-bold mb-2">Gig Not Posted</h2>
-        <p className="text-gray-600 mb-6">
+        {/* <p className="text-gray-600 mb-6">
           Your gig couldn't be posted because your wallet balance is too low. Please add funds to proceed.
+        </p> */}
+        <p className="text-gray-600 mb-6">
+          {onError?.message || "An unexpected error occurred while posting your gig. Please try again or fund your wallet."}
         </p>
 
         <div className="flex gap-4 w-full">

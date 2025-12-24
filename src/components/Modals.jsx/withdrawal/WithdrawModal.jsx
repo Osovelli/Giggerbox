@@ -1,11 +1,12 @@
 import { useState } from "react"
 import { X, Building2, CreditCard, QrCode } from "lucide-react"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { ChevronRight } from "lucide-react"
 import BankTransferWithdrawModal from "./BankTransferWithdrawModal"
 import PayPalWithdrawModal from "./PayPalWithdrawModal"
 import EWalletWithdrawModal from "./EWalletWithdrawModal"
+import useWalletStore from "@/store/walletStore"
 
 const withdrawalMethods = [
   {
@@ -32,6 +33,7 @@ const withdrawalMethods = [
 ]
 
 function WithdrawModal({ isOpen, onClose, walletBalance }) {
+  const { withdrawalOtpRequest, loading} = useWalletStore()
   const [selectedMethod, setSelectedMethod] = useState(null)
   const [isBankTransferModalOpen, setIsBankTransferModalOpen] = useState(false)
   const [isPayPalModalOpen, setIsPayPalModalOpen] = useState(false)
@@ -43,6 +45,11 @@ function WithdrawModal({ isOpen, onClose, walletBalance }) {
     // Open the appropriate modal based on the selected method
     if (methodId === "bank") {
       setIsBankTransferModalOpen(true)
+      try {
+        withdrawalOtpRequest()
+      } catch (error) {
+        console.log(error)
+      }
       onClose()
     } else if (methodId === "paypal") {
       setIsPayPalModalOpen(true)
@@ -56,16 +63,16 @@ function WithdrawModal({ isOpen, onClose, walletBalance }) {
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-md p-0">
+        <DialogContent className="sm:max-w-md p-0 ">
           <div className="p-6">
             <div className="flex items-center justify-between mb-2">
-              <h2 className="text-xl font-bold">Withdraw</h2>
+              <DialogTitle className="text-xl font-bold">Withdraw</DialogTitle>
               {/* <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
                 <X className="h-5 w-5" />
               </button> */}
             </div>
 
-            <p className="text-gray-600 mb-6">How would you like to withdraw your funds.</p>
+            <DialogDescription className="text-gray-600 mb-6">How would you like to withdraw your funds.</DialogDescription>
 
             <div className="space-y-3">
               {withdrawalMethods.map((method) => (
