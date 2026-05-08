@@ -136,7 +136,7 @@ const sampleMessages = [
   },
 ]
 
-function DashboardHeader() {
+function DashboardHeader({data}) {
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [isNotificationOpen, setIsNotificationOpen] = useState(false)
   const [notifications, setNotifications] = useState(sampleNotifications)
@@ -173,8 +173,8 @@ function DashboardHeader() {
 
   const UserButton = (
     <CustomButton variant="ghost" className="flex items-center border shadow-sm gap-2 px-2 ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-ring focus-visible:ring-offset-0">
-      <img src="/avatar.jpeg" alt="" className="h-8 w-8 rounded-full" />
-      <span>Abayomi</span>
+      <img src={data?.profileImage?.url || ''} alt="" className="h-8 w-8 rounded-full" />
+      <span>{data?.firstname || ''}</span>
     </CustomButton>
   )
 
@@ -219,8 +219,8 @@ function DashboardHeader() {
           className="flex items-center border shadow-sm gap-2 px-2 ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-ring focus-visible:ring-offset-0"
           onClick={() => setIsProfileOpen(true)}
           >
-            <img src="/avatar.jpeg" alt="" className="h-8 w-8 rounded-full" />
-            <span>Abayomi</span>
+            <img src={data?.profileImage?.url || ''} alt="" className="h-8 w-8 rounded-full" />
+            <span>{data?.firstname || ''}</span>
         </CustomButton>
         </div>
       </div>

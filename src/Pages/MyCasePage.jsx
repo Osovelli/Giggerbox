@@ -12,6 +12,8 @@ import FilterDrawer from "@/components/Case/FilterDrawer"
 import { useUserRole } from "../hooks/useUserRole"
 import useGigStore from "@/store/gigStore"
 import useCourseStore from "@/store/courseStore"
+import useRatingStore from "@/store/ratingStore"
+import RatingModal from "@/components/RatingModal"
 
 // Sample data for gig applications (as a worker)
 const gigApplicationsData = [
@@ -97,13 +99,14 @@ function MyCasePage() {
   // Get user role from custom hook
   const { userRole, setUserRole } = useUserRole()
   const { getMyGigs, myGigs, loading: gigsLoading } = useGigStore()
-  const { fetchUserCourses, userCourses, loading: coursesLoading } = useCourseStore()
+  const { getEnrolledCourses, enrolledCourses, loading: coursesLoading } = useCourseStore()
   const [activeView, setActiveView] = useState("gigs")
   const [activeStatus, setActiveStatus] = useState("ongoing")
   const [searchQuery, setSearchQuery] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(8)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
+
   const [filters, setFilters] = useState({
     dateRange: null,
     priceRange: { min: "", max: "" },
@@ -112,6 +115,7 @@ function MyCasePage() {
     applicationStatus: [],
   })
 
+
   useEffect(() => {
     // Fetch user's gigs when component mounts
     getMyGigs()
@@ -119,8 +123,8 @@ function MyCasePage() {
 
   useEffect(() => {
     // Fetch user's courses when component mounts
-    fetchUserCourses()
-  }, [fetchUserCourses])
+    getEnrolledCourses()
+  }, [getEnrolledCourses])
 
   // For demo purposes, allow toggling between roles
   const toggleRole = () => {
@@ -201,22 +205,22 @@ function MyCasePage() {
       }
 
       return {
-        id: course._id,
-        title: course.title,
+        id: course.course._id,
+        title: course.course.title,
         description: course.description,
         instructor: course.tutor?.email || course.tutor?.name || "Instructor",
-        progress: course.progress || 0,
-        startDate: course.enrolledAt || course.createdAt,
-        endDate: course.endDate || null,
+        progress: course.completionPercent || course.progress || 0,
+        startDate: course.course.enrolledAt || course.course.createdAt,
+        endDate: course.course.endDate || null,
         status: getCourseStatus(),
         type: course.type === "one-on-one" ? "1-on-1" : "Self-paced",
-        image: course.videoUrl || course.thumbnail || "/placeholder.svg",
+        image: course.course.videoUrl || course.course.thumbnail || "/placeholder.svg",
         price: course.price || 0,
         duration: course.duration,
         lessons: course.lessons || [],
         tutorId: course.tutor?._id,
         tutorEmail: course.tutor?.email,
-        slug: course.slug,
+        slug: course.course.slug,
         availableTimes: course.availableTimes || [],
       }
     })
@@ -224,7 +228,7 @@ function MyCasePage() {
 
   // Get the appropriate data based on user role and active view
   const getFilteredData = () => {
-    let data
+    let data;
 
     if (userRole === "poster") {
       if (activeView === "gigs") {
@@ -233,7 +237,7 @@ function MyCasePage() {
         data = transformedGigs
       } else {
         // Use transformed userCourses data from store
-        const transformedCourses = transformCourseData(userCourses || [])
+        const transformedCourses = transformCourseData(enrolledCourses || [])
         data = transformedCourses
       }
     } else {
@@ -242,7 +246,7 @@ function MyCasePage() {
         data = gigApplicationsData
       } else {
         // Use transformed userCourses data from store for workers too
-        const transformedCourses = transformCourseData(userCourses || [])
+        const transformedCourses = transformCourseData(enrolledCourses || [])
         data = transformedCourses
       }
     }
@@ -316,6 +320,7 @@ function MyCasePage() {
   const startIndex = (currentPage - 1) * itemsPerPage
   const paginatedData = filteredData.slice(startIndex, startIndex + itemsPerPage)
 
+
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1)
@@ -380,13 +385,13 @@ function MyCasePage() {
   const isLoading = (activeView === "gigs" ? gigsLoading : coursesLoading)
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="mx-auto px-4 py-8">
       {/* For demo purposes only - toggle between roles */}
-      <div className="mb-4 flex justify-end">
+      {/* <div className="mb-4 flex justify-end">
         <Button onClick={toggleRole} variant="outline" size="sm">
           Toggle Role: {userRole === "poster" ? "Gig Poster" : "Gig Worker"}
         </Button>
-      </div>
+      </div> */}
 
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">{getPageTitle()}</h1>
@@ -469,7 +474,7 @@ function MyCasePage() {
                 <div className="space-y-6">
                   {paginatedData.map((item) => {
                     if (activeView === "courses") {
-                      return <CourseItem key={item.id} course={item} />
+                      return <CourseItem handleOpenRatingModal={() => setIsRatingModalOpen(true)} key={item.id} course={item} />
                     } else if (userRole === "poster") {
                       return <GigPosterItem key={item.id} gig={item} />
                     } else {

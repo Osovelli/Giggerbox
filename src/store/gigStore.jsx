@@ -78,7 +78,7 @@ const useGigStore = create((set) => ({
     try {
       set({ loading: true });
         const response = await axiosInstance.get('/gigs/my-jobs');
-        console.log("My gigs fetched successfully:", response.data);
+        /* console.log("My gigs fetched successfully:", response.data); */
         set({ loading: false, myGigs: response.data?.data });
         return response.data;
         } catch (error) {

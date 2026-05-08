@@ -104,9 +104,9 @@ function App() {
           <Route path="one-on-one-preview" element={<OneOnOneCoursePreview />} />
           <Route path="creations" element={<MyCreations />} />
           <Route path="course-history" element={<CourseHistoryPage />} />
-          <Route path="course/:id" element={<CourseDetailRouter />} />
-          <Route path="course/:id/one-on-one" element={<OneOnOneCourseDetailsPage />} />
-          <Route path="course/:id/self-paced" element={<SelfPacedCourseDetails />} />
+          <Route path="course/:slug" element={<CourseDetailRouter />} />
+          <Route path="course/:slug/one-on-one" element={<OneOnOneCourseDetailsPage />} />
+          <Route path="course/:slug/self-paced" element={<SelfPacedCourseDetails />} />
           <Route path="post-gig" element={<PostGigPage />} />
           <Route path="case" element={<MyCasePage />} />
           <Route path="gigs/:id/offers" element={<GigOffersPage />} />

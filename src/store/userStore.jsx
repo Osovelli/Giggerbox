@@ -1,6 +1,7 @@
 import toast from "react-hot-toast";
 import axiosInstance from "@/lib/axiosInstance";
 import { create } from "zustand";
+import useUploadStore from "./uploadStore";
 
 const useUserStore = create((set) => ({
   /*   accessToken: null,
@@ -124,7 +125,7 @@ const useUserStore = create((set) => ({
   userOnboarding: async () => {
     try {
       set({ loading: true })
-      const response = await axiosInstance.get('/onboarding/me')
+      const response = await axiosInstance.get('/onboarding/onboarding')
       console.log("User onboarding status fetched successfully:", response.data);
       set({ loading: false, user: response.data })
       return response.data;
@@ -135,6 +136,22 @@ const useUserStore = create((set) => ({
       throw error;
     }
   },
+
+  getUserProfile: async () => {
+    try {
+      set({ loading: true })
+      const response = await axiosInstance.get('/user/my')
+      console.log("User profile fetched successfully:", response.data);
+      set({ loading: false, user: response.data?.data?.profile || null })
+      return response.data;
+    } catch (error) {
+      console.error("User profile fetch error:", error);
+      toast.error("Failed to fetch user profile. Please try again.");
+      set({ loading: false })
+      throw error;
+    }
+  },
+
 
   changeProfile: async ({ payload }) => {
     try {
@@ -147,6 +164,26 @@ const useUserStore = create((set) => ({
     } catch (error) {
       console.error("User profile change error:", error);
       toast.error("User profile change failed. Please try again.");
+      set({ loading: false })
+      throw error;
+    }
+  },
+
+  changeProfilePicture: async ({ profileImage }) => {
+    try {
+      set({ loading: true })
+      const uploadFile = useUploadStore.getState().uploadFile;
+
+      const uploadedProfileImage = await uploadFile(profileImage, "user/profile_image");
+
+      const response = await axiosInstance.put('/user/profile-image', { profileImage: uploadedProfileImage });
+      console.log("User profile picture changed successfully:", response.data);
+      toast.success("User profile picture changed successfully!!");
+      set({ loading: false, user: response.data?.data?.user || null })
+      return response.data;
+    } catch (error) {
+      console.error("User profile picture change error:", error);
+      toast.error("User profile picture change failed. Please try again.");
       set({ loading: false })
       throw error;
     }

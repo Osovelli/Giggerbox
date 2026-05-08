@@ -96,6 +96,7 @@ function ExplorePage() {
     return coursesArray.map(course => ({
       ...course,
       id: course._id,
+      slug: course.slug,
       rating: course.rating || 0,
       reviews: course.reviews || 0,
       progress: course.progress || 0,
@@ -215,8 +216,9 @@ function ExplorePage() {
     navigate(`/dashboard/gig/${id}`)
   }
 
-  const handleViewCourseDetails = (id) => {
-    navigate(`/dashboard/course/${id}`)
+  const handleViewCourseDetails = (course) => {
+    console.log("Navigating to course slug:", course.slug)
+    navigate(`/dashboard/course/${course.slug}`, { state: { id: course.id } })
   }
 
   // Generate page numbers for pagination
@@ -334,7 +336,7 @@ function ExplorePage() {
                         <div 
                           key={course.id} 
                           className="border rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer"
-                          onClick={() => handleViewCourseDetails(course.id)}
+                          onClick={() => handleViewCourseDetails(course)}
                         >
                           <div className="flex gap-4">
                             <img

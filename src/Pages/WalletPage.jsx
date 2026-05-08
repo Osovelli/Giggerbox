@@ -10,7 +10,6 @@ import CardFundingModal from "@/components/Modals.jsx/CardFundingModal"
 import ConvertPointsModal from "@/components/Modals.jsx/ConvertPointsModal"
 import WithdrawModal from "@/components/Modals.jsx/Withdrawal/WithdrawModal"
 import useWalletStore from "@/store/walletStore"
-import { use } from "react"
 
 // Sample transaction data
 /* const transactionsData = [

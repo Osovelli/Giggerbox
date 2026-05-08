@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
+import useUserStore from "@/store/userStore"
+import { use } from "react"
 
 // Account navigation items
 const accountItems = [
@@ -22,6 +24,7 @@ function AccountLayout() {
   const location = useLocation()
   const navigate = useNavigate()
   const [activeSection, setActiveSection] = useState("Edit Profile")
+  const {getUserProfile, user, loading} = useUserStore()
 
   // Set active section based on current route
   useEffect(() => {
@@ -40,6 +43,17 @@ function AccountLayout() {
     navigate("/signin")
   }
 
+  useEffect(() => {
+    getUserProfile()
+  }, [])
+
+  const formatDate = (dateString) => {
+    if (!dateString) return null
+    const d = new Date(dateString)
+    if (Number.isNaN(d.getTime())) return dateString
+    return new Intl.DateTimeFormat('en-CA').format(d)
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Main Content */}
@@ -48,12 +62,12 @@ function AccountLayout() {
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Left Column */}
-          <div className="md:col-span-1">
+          <div className="lg:col-span-1 md:col-span-2">
             <div className="bg-white rounded-lg border p-6 space-y-6">
               {/* Profile Summary */}
               <div className="space-y-1 text-center">
-                <h2 className="text-xl font-semibold">Abayomi Olowu</h2>
-                <p className="text-sm text-muted-foreground">abayomiolowu@Giggerz.com</p>
+                <h2 className="text-xl font-semibold">{user?.firstname} {user?.lastname}</h2>
+                <p className="text-sm text-muted-foreground">{user?.email}</p>
               </div>
 
               <div className="grid grid-cols-3 gap-4 text-center border-b pb-4">
@@ -67,7 +81,7 @@ function AccountLayout() {
                 </div>
                 <div>
                   <div className="text-xs text-muted-foreground">Joined</div>
-                  <div className="font-medium">2022</div>
+                  <div className="font-medium">{formatDate(user?.createdAt)}</div>
                 </div>
               </div>
 
@@ -114,7 +128,7 @@ function AccountLayout() {
           </div>
 
           {/* Right Column - Content Area */}
-          <div className="md:col-span-3 bg-white rounded-lg border p-6">
+          <div className="lg:col-span-3 md:col-span-2 bg-white rounded-lg border p-6">
             <Outlet />
           </div>
         </div>

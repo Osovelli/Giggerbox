@@ -4,12 +4,32 @@ import { CustomProgress } from "../CustomProgress"
 import { Star, MoreHorizontal } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useNavigate } from "react-router-dom"
+import RatingModal from "../RatingModal"
+import useRatingStore from "@/store/ratingStore"
+import { useState } from "react"
 
 function CourseItem({ course }) {
+  const [isRatingModalOpen, setIsRatingModalOpen] = useState(false)
+  const { submitRating, loading } = useRatingStore()
+
+  const handleRatingSubmit = async (ratingData) => {
+      console.log("Submitting rating data:", ratingData)
+      await submitRating({
+        courseId: ratingData.CourseId,
+        rating: ratingData.rating,
+        comment: ratingData.comment
+      })
+      // Handle success
+  }
+
   const navigate = useNavigate()
 
+  const handleOpenRatingModal = () => {
+    setIsRatingModalOpen(true)
+  }
+
   const handleViewDetails = () => {
-    navigate(`/courses/${course.id}`)
+    navigate(`/dashboard/course/${course.slug}`, { state: { id: course.id || course._id } })
   }
 
   const formatDate = (dateString) => {
@@ -43,11 +63,11 @@ function CourseItem({ course }) {
               <h3 className="text-xl font-semibold">{course.title}</h3>
             </div>
             <p className="text-gray-600 line-clamp-2 mb-2">{course.description}</p>
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <div className="flex flex-col md:flex-row items-center gap-4 text-sm text-muted-foreground">
               <span>Instructor: {course.instructor}</span>
-              <span>•</span>
+              <span className="hidden md:block">•</span>
               <span>Type: {course.type}</span>
-              <span>•</span>
+              <span className="hidden md:block">•</span>
               <span>
                 {formatDate(course.startDate)} - {formatDate(course.endDate)}
               </span>
@@ -86,14 +106,25 @@ function CourseItem({ course }) {
       )}
 
       <div className="flex justify-between items-center">
-        <div className="flex items-center gap-1">
+        <Button onClick={handleOpenRatingModal} variant="outline" size="sm" className="flex items-center gap-1">
           <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
           <span className="text-sm">Rate this course</span>
-        </div>
+        </Button>
         <Button variant="outline" size="sm" onClick={handleViewDetails}>
           Continue Learning
         </Button>
       </div>
+
+      {/* Rating Modal */}
+      <RatingModal
+        isOpen={isRatingModalOpen}
+        onClose={() => setIsRatingModalOpen(false)}
+        //type="course"
+        itemId={course.id}
+        itemName={course.title}
+        onSubmit={handleRatingSubmit}
+        isLoading={loading}
+      />
     </div>
   )
 }

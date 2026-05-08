@@ -28,8 +28,8 @@ const sampleReviews = [
 ]
 
 function SelfPacedCourseDetails() {
-  const { getCourseById, loading } = useCourseStore()
-  //const { id } = useParams()
+  const { getCourseById, loading, createCourseEnrollment } = useCourseStore()
+  const { id } = useParams()
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -183,8 +183,16 @@ function SelfPacedCourseDetails() {
     }
   }
 
-  const handleEnrollAndPay = () => {
-    setIsEnrollmentSuccessOpen(true)
+  const handleEnrollAndPay = async() => {
+    try {
+      console.log("Enrolling in course with ID:", id)
+      const response = await createCourseEnrollment({ courseId: id })
+      if (response) {
+        setIsEnrollmentSuccessOpen(true)
+      }
+    } catch (error) {
+      console.error("Error enrolling in course:", error)
+    }
   }
 
   const handleContinueAfterEnrollment = () => {

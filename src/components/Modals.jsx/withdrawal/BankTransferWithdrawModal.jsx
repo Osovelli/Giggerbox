@@ -8,6 +8,7 @@ import WithdrawalConfirmationModal from "./WithdrawalConfirmationModal"
 import useWalletStore from "@/store/walletStore"
 
 function BankTransferWithdrawModal({ isOpen, onClose, walletBalance }) {
+  const { withdrawalOtpRequest, withdrawalRequest, loading: withdrawalOtpLoading } = useWalletStore()
   const { getBankAccounts, deleteBankAccount, loading } = useWalletStore()
   const [savedBanks, setSavedBanks] = useState([])
   const [amount, setAmount] = useState("")
@@ -104,7 +105,15 @@ function BankTransferWithdrawModal({ isOpen, onClose, walletBalance }) {
       }
     }
 
+    try {
+    withdrawalRequest({ amount: numAmount, bankAccountId: selectedBank._id || selectedBank.id })
+    withdrawalOtpRequest()
+    } catch (error) {
+      console.log(error)
+    }
+
     setIsConfirmationModalOpen(true)
+    //toast.success("please input the OTP sent to your email to proceed with the withdrawal")
   }
 
   // Handle successful bank addition
@@ -145,7 +154,7 @@ function BankTransferWithdrawModal({ isOpen, onClose, walletBalance }) {
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-md p-4 max-h-96 overflow-y-scroll">
+        <DialogContent className="sm:max-w-md p-4  overflow-y-scroll">
           <div className="p-6">
             <div className="flex items-center justify-between mb-2">
               <DialogTitle className="text-xl font-bold">Bank Transfer</DialogTitle>

@@ -4,12 +4,18 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Camera, Loader2 } from "lucide-react"
 import CustomButton from "@/components/CustomButton"
 import useUserStore from "@/store/userStore"
-import { toast } from "sonner"
-import { useEffect } from "react"
+import toast from "react-hot-toast"
+import { useEffect, useState, useRef } from "react"
+
 function EditProfile() {
-  const { user, changeProfile, loading } = useUserStore()
+  const { user, changeProfile, changeProfilePicture, loading } = useUserStore()
+  const [imageLoading, setImageLoading] = useState(false)
+  const [profileImagePreview, setProfileImagePreview] = useState(null)
+  const fileInputRef = useRef(null)
+  
   const {
     register,
     handleSubmit,
@@ -26,12 +32,10 @@ function EditProfile() {
       phone: "",
       email: "",
       bio: "",
-      profileImageUrl: "",
-      profileImagePublicId: "",
     },
   })
 
-  // populate form values when user available
+  // Populate form values when user available
   useEffect(() => {
     console.log("Populating form with user data:", user)
     if (!user) return
@@ -43,46 +47,84 @@ function EditProfile() {
     setValue("phone", user?.phone || "")
     setValue("email", user?.email || "")
     setValue("bio", user?.bio || "")
-    setValue("profileImageUrl", user?.profileImage?.url || "")
-    setValue("profileImagePublicId", user?.profileImage?.publicId || "")
+    
+    // Set initial profile image preview
+    if (user?.profileImage?.url) {
+      setProfileImagePreview(user.profileImage.url)
+    }
   }, [user, setValue])
 
   const validateForm = (data) => {
     const newErrors = {}
 
-    if (!data.firstName || data.firstName.length < 2) {
-      newErrors.firstName = "First name must be at least 2 characters"
-    }
+    const isFirstNameValid = data.firstName && data.firstName.length >= 2
+    const isLastNameValid = data.lastName && data.lastName.length >= 2
+    const isPhoneValid = data.phone && data.phone.length >= 10
+    const isEmailValid = data.email && /\S+@\S+\.\S+/.test(data.email)
 
-    if (!data.lastName || data.lastName.length < 2) {
-      newErrors.lastName = "Last name must be at least 2 characters"
-    }
-
-    if (!data.phone || data.phone.length < 10) {
-      newErrors.phone = "Phone number must be at least 10 characters"
-    }
-
-    if (!data.email || !/\S+@\S+\.\S+/.test(data.email)) {
-      newErrors.email = "Invalid email address"
+    if (!isFirstNameValid && !isLastNameValid && !isPhoneValid && !isEmailValid) {
+      newErrors.firstName = "At least one field must be valid"
     }
 
     return newErrors
   }
 
-  const onSubmit = async(data) => {
+  // Handle profile picture change
+  const handleProfilePictureChange = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error("Please upload an image file")
+      return
+    }
+
+    // Validate file size (e.g., max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image size should be less than 5MB")
+      return
+    }
+
+    try {
+      setImageLoading(true)
+
+      // Create preview
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setProfileImagePreview(reader.result)
+      }
+      reader.readAsDataURL(file)
+
+      // Upload profile picture
+      await changeProfilePicture({ profileImage: file })
+      
+      toast.success("Profile picture updated successfully!")
+    } catch (err) {
+      console.error("Error uploading profile picture:", err)
+      const msg = err?.response?.data?.message || "Failed to update profile picture"
+      toast.error(msg)
+      
+      // Revert preview on error
+      setProfileImagePreview(user?.profileImage?.url || null)
+    } finally {
+      setImageLoading(false)
+    }
+  }
+
+  // Handle form submission for profile details
+  const onSubmit = async (data) => {
     const validationErrors = validateForm(data)
 
     if (Object.keys(validationErrors).length > 0) {
-      // apply validation errors to react-hook-form
-      Object.entries(validationErrors).forEach(([k, v]) => setError(k, { type: "manual", message: v }))
+      // Apply validation errors to react-hook-form
+      Object.entries(validationErrors).forEach(([k, v]) => 
+        setError(k, { type: "manual", message: v })
+      )
       return
     }
 
     const payload = {
-      profileImage: {
-        url: data.profileImageUrl || "",
-        publicId: data.profileImagePublicId || "",
-      },
       firstname: data.firstName,
       lastname: data.lastName,
       othername: data.otherName || "",
@@ -94,15 +136,17 @@ function EditProfile() {
     }
 
     try {
-      await changeProfile(payload)
-      //toast.success("Profile updated successfully!")
+      await changeProfile({ payload })
+      toast.success("Profile updated successfully!")
     } catch (err) {
+      console.error("Error updating profile:", err)
       const msg = err?.response?.data?.message || "Failed to update profile"
       toast.error(msg)
+      
       const fieldErrors = err?.response?.data?.errors
       if (fieldErrors && typeof fieldErrors === "object") {
         Object.entries(fieldErrors).forEach(([key, value]) => {
-          // map server keys to form keys if necessary
+          // Map server keys to form keys if necessary
           const formKey = {
             firstname: "firstName",
             lastname: "lastName",
@@ -111,10 +155,17 @@ function EditProfile() {
             email: "email",
             bio: "bio",
           }[key] || key
-          setError(formKey, { type: "server", message: Array.isArray(value) ? value.join(", ") : value })
+          setError(formKey, { 
+            type: "server", 
+            message: Array.isArray(value) ? value.join(", ") : value 
+          })
         })
       }
     }
+  }
+
+  const triggerFileInput = () => {
+    fileInputRef.current?.click()
   }
 
   return (
@@ -124,34 +175,81 @@ function EditProfile() {
         <p className="text-sm text-muted-foreground">Keep your profile up-to-date.</p>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* Profile Picture */}
-        <div className="flex justify-left mb-6">
+      {/* Profile Picture Section - Separate from form */}
+      <div className="flex items-center gap-6 p-6 border rounded-lg bg-gray-50">
+        <div className="relative">
           <Avatar className="h-24 w-24">
-            <AvatarImage src={user?.profileImage?.url || "/avatar.jpeg"} />
-            <AvatarFallback>{(user?.firstname?.[0] || "A") + (user?.lastname?.[0] || "O")}</AvatarFallback>
+            <AvatarImage src={profileImagePreview || user?.profileImage?.url} />
+            <AvatarFallback>
+              {(user?.firstname?.[0] || "A") + (user?.lastname?.[0])}
+            </AvatarFallback>
           </Avatar>
+          
+          {/* Camera icon overlay */}
+          <button
+            type="button"
+            onClick={triggerFileInput}
+            disabled={imageLoading}
+            className="absolute bottom-0 right-0 p-2 bg-primary rounded-full text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
+          >
+            {imageLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Camera className="h-4 w-4" />
+            )}
+          </button>
 
-          <div className="flex-1 space-y-2">
-            <label className="text-sm font-medium block">Profile image URL</label>
-            <Input placeholder="https://..." {...register("profileImageUrl")} />
-            <label className="text-sm font-medium block mt-2">Profile image publicId</label>
-            <Input placeholder="users/profile_12345" {...register("profileImagePublicId")} />
-          </div>
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleProfilePictureChange}
+            className="hidden"
+            disabled={imageLoading}
+          />
         </div>
 
-        {/* Form Fields */}
+        <div className="flex-1">
+          <h3 className="font-medium mb-1">Profile Picture</h3>
+          <p className="text-sm text-muted-foreground mb-2">
+            Click the camera icon to upload a new profile picture
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Supported formats: JPG, PNG, GIF (Max size: 5MB)
+          </p>
+        </div>
+      </div>
+
+      {/* Profile Details Form */}
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="space-y-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium">First name</label>
-            <Input placeholder="e.g John" {...register("firstName")} />
-            {errors.firstName && <p className="text-sm text-red-500">{errors.firstName}</p>}
+            <label className="text-sm font-medium">
+              First name <span className="text-red-500">*</span>
+            </label>
+            <Input 
+              placeholder="e.g John" 
+              {...register("firstName")} 
+              className={errors.firstName ? "border-red-500" : ""}
+            />
+            {errors.firstName && (
+              <p className="text-sm text-red-500">{errors.firstName.message}</p>
+            )}
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Last name</label>
-            <Input placeholder="e.g Doe" {...register("lastName")} />
-            {errors.lastName && <p className="text-sm text-red-500">{errors.lastName}</p>}
+            <label className="text-sm font-medium">
+              Last name <span className="text-red-500">*</span>
+            </label>
+            <Input 
+              placeholder="e.g Doe" 
+              {...register("lastName")}
+              className={errors.lastName ? "border-red-500" : ""}
+            />
+            {errors.lastName && (
+              <p className="text-sm text-red-500">{errors.lastName.message}</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -162,35 +260,6 @@ function EditProfile() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* <div className="space-y-2">
-              <label className="text-sm font-medium">Age</label>
-              <Select onValueChange={(value) => setValue("age", value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="e.g 12years" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Array.from({ length: 83 }, (_, i) => i + 18).map((age) => (
-                    <SelectItem key={age} value={age.toString()}>
-                      {age} years
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Gender</label>
-              <Select onValueChange={(value) => setValue("gender", value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Male" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="male">Male</SelectItem>
-                  <SelectItem value="female">Female</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div> */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Date of birth</label>
               <Input type="date" {...register("dob")} />
@@ -201,28 +270,59 @@ function EditProfile() {
               <Input placeholder="e.g. Nigerian" {...register("nationality")} />
             </div>
           </div>
-          
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Phone number</label>
-            <Input placeholder="e.g 0810 000 0000" {...register("phone")} />
-            {errors.phone && <p className="text-sm text-red-500">{errors.phone}</p>}
+            <label className="text-sm font-medium">
+              Phone number <span className="text-red-500">*</span>
+            </label>
+            <Input 
+              placeholder="e.g 0810 000 0000" 
+              {...register("phone")}
+              className={errors.phone ? "border-red-500" : ""}
+            />
+            {errors.phone && (
+              <p className="text-sm text-red-500">{errors.phone.message}</p>
+            )}
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Email</label>
-            <Input placeholder="e.g johndoe@domainname.com" {...register("email")} />
-            {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
+            <label className="text-sm font-medium">
+              Email <span className="text-red-500">*</span>
+            </label>
+            <Input 
+              placeholder="e.g johndoe@domainname.com" 
+              {...register("email")}
+              className={errors.email ? "border-red-500" : ""}
+            />
+            {errors.email && (
+              <p className="text-sm text-red-500">{errors.email.message}</p>
+            )}
           </div>
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Brief bio</label>
-            <Textarea placeholder="Enter bio" className="min-h-[100px]" {...register("bio")} />
+            <Textarea 
+              placeholder="Tell us about yourself" 
+              className="min-h-[100px]" 
+              {...register("bio")} 
+            />
           </div>
         </div>
 
-        <CustomButton size={'lg'} type="submit" className="w-full rounded-full bg-black hover:bg-black/90">
-          {loading ? "Saving..." : "Save"}
+        <CustomButton 
+          size="lg" 
+          type="submit" 
+          className="w-full rounded-full bg-black hover:bg-black/90"
+          disabled={loading}
+        >
+          {loading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            "Save Changes"
+          )}
         </CustomButton>
       </form>
     </div>

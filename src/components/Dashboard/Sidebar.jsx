@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils"
 import { Logo } from "../Icons/Logo"
 import CustomTooltip from "../CustomTooltip"
 
-function Sidebar({ open, onClose }) {
+function Sidebar({ open, onClose, data }) {
   const location = useLocation()
 
   const navigation = [
@@ -86,10 +86,10 @@ function Sidebar({ open, onClose }) {
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <img src="/avatar.jpeg" alt="" className="h-10 w-10 rounded-full" />
+              <img src={data?.profileImage?.url} alt="" className="h-10 w-10 rounded-full" />
               <div className="min-w-0">
-                <p className="font-medium truncate">Abayomi Olowu</p>
-                <p className="text-sm text-muted-foreground truncate">abayomiolowu@Giggerz.com</p>
+                <p className="font-medium truncate">{data?.firstname} {data?.lastname}</p>
+                <p className="text-sm text-muted-foreground truncate">{data?.email}</p>
               </div>
             </div>
             <button

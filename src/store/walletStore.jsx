@@ -189,18 +189,33 @@ const useWalletStore = create((set) => ({
     }
   },
 
-  
+  withdrawalRequest: async({ amount, bankAccountId }) => {
+    try {
+      set({ loading: true });
+      const response = await axiosInstance.post('/wallet/withdraw', { amount, bankAccountId });
+      console.log("Withdrawal request successful:", response.data);
+      toast.success("Withdrawal initiated successfully!");
+      set({ loading: false });
+      return response.data;
+    } catch (error) {
+      console.error("Withdrawal request error:", error);
+      toast.error("Withdrawal request failed. Please try again.");
+      set({ loading: false });
+      throw error;
+    }
+  },
+
 
   withdrawalOtpRequest: async() => {
     try {
       set({ loading: true });
       const response = await axiosInstance.post('/wallet/withdraw/send-otp');
       console.log("Withdrawal OTP requested successfully:", response.data);
-      toast.success("Withdrawal OTP requested successfully!");
+      toast.success("Please Check your email for the OTP to proceed with the withdrawal.");
       set({ loading: false });
       return response.data;
     } catch (error) {
-      console.error("Withdrawal OTP request error:", error);
+      //console.error("Withdrawal OTP request error:", error);
       toast.error("Withdrawal OTP request failed. Please try again.");
       set({ loading: false });
       throw error;

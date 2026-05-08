@@ -8,7 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import toast from "react-hot-toast"
-import useCourseStore from "@/store/courseStore"
 
 const courseCategories = [
   { value: "design", label: "Design" },
@@ -20,8 +19,8 @@ const courseCategories = [
 ]
 
 function CreateCourse() {
-  const { createCourse, loading } = useCourseStore()
   const navigate = useNavigate()
+  const [loading, setLoading] = useState(false)
   
   const [formData, setFormData] = useState({
     title: "",
@@ -41,7 +40,6 @@ function CreateCourse() {
   const handleInputChange = (e) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
-    // Clear error for this field when user starts typing
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }))
     }
@@ -50,12 +48,10 @@ function CreateCourse() {
   const handleFileChange = (e) => {
     const file = e.target.files[0]
     if (file) {
-      // Validate file type
       if (!file.type.startsWith("image/")) {
         setErrors((prev) => ({ ...prev, thumbnail: "Please upload an image file" }))
         return
       }
-      // Validate file size (e.g., max 5MB)
       if (file.size > 5 * 1024 * 1024) {
         setErrors((prev) => ({ ...prev, thumbnail: "Image size should be less than 5MB" }))
         return
@@ -99,75 +95,44 @@ function CreateCourse() {
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    // Validate form
     if (!validateForm()) {
       toast.error("Please fill in all required fields correctly")
       return
     }
 
     try {
-      // Prepare payload according to API structure
-      const payload = {
+      setLoading(true)
+
+      // Store course data in sessionStorage to pass between pages
+      const courseData = {
         title: formData.title.trim(),
         description: formData.description.trim(),
+        category: formData.category,
         type: formData.type,
         price: formData.isFree ? 0 : Number(formData.price),
         duration: Number(formData.duration),
         videoUrl: formData.videoUrl.trim() || "",
-        lessons: [], // Will be added in next step
-        availableTimes: [], // Will be set in availability page for 1-on-1 courses
         promo: formData.promo?.trim() || null,
+        thumbnail: formData.thumbnail,
       }
 
-      // If you need to upload thumbnail separately, do it here
-      // For now, we'll include it in the payload if your API supports it
-      if (formData.thumbnail) {
-        // If your API requires FormData for file upload
-        const formDataToSend = new FormData()
-        Object.keys(payload).forEach(key => {
-          if (payload[key] !== null && payload[key] !== undefined) {
-            formDataToSend.append(key, 
-              typeof payload[key] === 'object' ? JSON.stringify(payload[key]) : payload[key]
-            )
-          }
-        })
-        formDataToSend.append('thumbnail', formData.thumbnail)
+      sessionStorage.setItem('courseData', JSON.stringify(courseData))
 
-        // Debug logging FormData entries
-        console.log("FormData to be sent:", payload)
-        
-        // Call API with FormData
-        //const result = await createCourse(formDataToSend)
-        const result = await createCourse(payload)
-        
-        if (result) {
-          toast.success("Course created successfully!")
-          
-          // Navigate based on course type
-          if (formData.type === "one-on-one") {
-            navigate("/dashboard/set-availability", { state: { courseId: result.data._id } })
-          } else {
-            navigate("/dashboard/add-course-content", { state: { courseId: result.data._id } })
-          }
-        }
+      //toast.success("Course details saved!")
+
+      // Navigate based on course type
+      if (formData.type === "one-on-one") {
+        // For one-on-one, go to set availability
+        navigate("/dashboard/set-availability")
       } else {
-        // Call API without thumbnail
-        const result = await createCourse(payload)
-        
-        if (result.success) {
-          toast.success("Course created successfully!")
-          
-          // Navigate based on course type
-          if (formData.type === "one-on-one") {
-            navigate("/dashboard/set-availability", { state: { courseId: result.data._id } })
-          } else {
-            navigate("/dashboard/add-course-content", { state: { courseId: result.data._id } })
-          }
-        }
+        // For self-paced, go to add content
+        navigate("/dashboard/add-course-content")
       }
     } catch (error) {
-      console.error("Error creating course:", error)
-      toast.error(error.message || "Failed to create course. Please try again.")
+      console.error("Error saving course:", error)
+      toast.error("Failed to save course details")
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -186,7 +151,6 @@ function CreateCourse() {
         <p className="text-muted-foreground">Provide details about your course to make it stand out.</p>
       </div>
 
-      {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Course Title */}
         <div className="space-y-2">
@@ -402,7 +366,7 @@ function CreateCourse() {
           {loading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Creating Course...
+              Saving...
             </>
           ) : (
             "Continue"

@@ -1,23 +1,38 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
-import { ArrowLeft, Upload, X, AlertTriangle } from "lucide-react"
+import { ArrowLeft, Upload, X, AlertTriangle, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Progress } from "@/components/ui/progress"
 import CustomButton from "@/components/CustomButton"
 import CustomInput from "@/components/CustomInput"
+import toast from "react-hot-toast"
 
 function AddCourseContent() {
   const navigate = useNavigate()
+  const [loading, setLoading] = useState(false)
+  const [courseData, setCourseData] = useState(null)
   const [sections, setSections] = useState([
     {
       id: 1,
       title: "",
       description: "",
       videos: [],
+      resources: [],
     },
   ])
+
+  // Load course data from sessionStorage
+  useEffect(() => {
+    const savedData = sessionStorage.getItem('courseData')
+    if (!savedData) {
+      toast.error("Course data not found. Please start from the beginning.")
+      navigate("/dashboard/create-course")
+      return
+    }
+    setCourseData(JSON.parse(savedData))
+  }, [navigate])
 
   const handleFileUpload = (sectionId, files) => {
     setSections((prevSections) =>
@@ -28,7 +43,7 @@ function AddCourseContent() {
             name: file.name,
             size: file.size,
             progress: 0,
-            status: "uploading", // uploading, completed, error
+            status: "uploading",
             file,
           }))
           return {
@@ -99,11 +114,16 @@ function AddCourseContent() {
         title: "",
         description: "",
         videos: [],
+        resources: [],
       },
     ])
   }
 
   const removeSection = (id) => {
+    if (sections.length === 1) {
+      toast.error("You must have at least one section")
+      return
+    }
     setSections((prev) => {
       const filteredSections = prev.filter((section) => section.id !== id)
       return filteredSections.map((section, index) => ({
@@ -124,12 +144,68 @@ function AddCourseContent() {
     )
   }
 
-  const handleSubmit = (e) => {
+  const validateSections = () => {
+    for (const section of sections) {
+      if (!section.title.trim()) {
+        toast.error(`Section ${section.id} must have a title`)
+        return false
+      }
+      if (!section.description.trim()) {
+        toast.error(`Section ${section.id} must have a description`)
+        return false
+      }
+      /* if (section.videos.length === 0) {
+        toast.error(`Section ${section.id} must have at least one video`)
+        return false
+      } */
+      // Check if all videos are uploaded
+      const hasUploadingVideos = section.videos.some(v => v.status === "uploading")
+      if (hasUploadingVideos) {
+        toast.error("Please wait for all videos to finish uploading")
+        return false
+      }
+    }
+    return true
+  }
+
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    // Add your form submission logic here
-    console.log(sections)
-    // Navigate to preview or publish page
-    navigate("/dashboard/course-preview")
+
+    if (!validateSections()) {
+      return
+    }
+
+    try {
+      setLoading(true)
+
+      // Transform sections into lessons format
+      const lessons = sections.map(section => ({
+        title: section.title,
+        description: section.description,
+        videos: section.videos.map(v => v.name), // In real app, upload and get URLs
+        resources: section.resources || [],
+        availableTimes: [], // For self-paced, this is empty
+      }))
+
+      // Update courseData with lessons
+      const updatedCourseData = {
+        ...courseData,
+        lessons,
+      }
+
+      // Save to sessionStorage
+      sessionStorage.setItem('courseData', JSON.stringify(updatedCourseData))
+
+      toast.success("Course content saved!")
+      
+      // Navigate to preview
+      navigate("/dashboard/course-preview")
+    } catch (error) {
+      console.error("Error saving content:", error)
+      toast.error("Failed to save course content")
+    } finally {
+      setLoading(false)
+    }
   }
 
   const formatFileSize = (bytes) => {
@@ -138,6 +214,14 @@ function AddCourseContent() {
     const sizes = ["Bytes", "KB", "MB", "GB"]
     const i = Math.floor(Math.log(bytes) / Math.log(k))
     return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(0)) + " " + sizes[i]
+  }
+
+  if (!courseData) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
   }
 
   return (
@@ -152,27 +236,31 @@ function AddCourseContent() {
         </button>
         <h1 className="text-2xl font-semibold mb-2">Add Course Content</h1>
         <p className="text-muted-foreground">
-          Upload videos and organize them into sections to create a structured learning experience.
+          Upload videos and organize them into sections for <strong>{courseData.title}</strong>
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
         {sections.map((section, index) => (
-          <div key={section.id} className="space-y-6 relative">
+          <div key={section.id} className="space-y-6 relative p-6 border rounded-lg">
             {index > 0 && (
               <button
                 type="button"
                 onClick={() => removeSection(section.id)}
-                className="absolute top-0 right-0 text-gray-400 hover:text-gray-500"
+                className="absolute top-4 right-4 text-gray-400 hover:text-red-500"
               >
-                <X className="h-4 w-4" />
+                <X className="h-5 w-5" />
               </button>
             )}
-            <div className="flex items-center gap-2 text-sm font-medium text-primary">SECTION {section.id}</div>
+            <div className="flex items-center gap-2 text-sm font-medium text-primary">
+              SECTION {section.id}
+            </div>
 
             {/* Section Title */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Section Title</label>
+              <label className="text-sm font-medium">
+                Section Title <span className="text-red-500">*</span>
+              </label>
               <CustomInput
                 placeholder="e.g. Introduction to Graphic Design"
                 value={section.title}
@@ -182,7 +270,9 @@ function AddCourseContent() {
 
             {/* Video Description */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Video Description</label>
+              <label className="text-sm font-medium">
+                Section Description <span className="text-red-500">*</span>
+              </label>
               <Textarea
                 placeholder="Learn the basics of graphic design, from tools to techniques."
                 value={section.description}
@@ -192,11 +282,14 @@ function AddCourseContent() {
 
             {/* Video Upload */}
             <div className="space-y-4">
+              <label className="text-sm font-medium">
+                Videos <span className="text-red-500">*</span>
+              </label>
               <div
                 className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary transition-colors"
                 onClick={() => document.getElementById(`video-upload-${section.id}`).click()}
               >
-                <CustomInput
+                <input
                   type="file"
                   id={`video-upload-${section.id}`}
                   className="hidden"
@@ -262,21 +355,29 @@ function AddCourseContent() {
 
         {/* Add Section Button */}
         <CustomButton 
-        type="button" 
-        variant="outline" 
-        className="w-full" 
-        onClick={addSection}
+          type="button" 
+          variant="outline" 
+          className="w-full" 
+          onClick={addSection}
+          disabled={loading}
         >
           Add more section
         </CustomButton>
 
         {/* Preview Button */}
         <CustomButton
-         type="submit" 
-         className="w-full bg-black hover:bg-black/90"
-         onClick={() => navigate("/dashboard/course-preview")}
-         >
-          Preview
+          type="submit" 
+          className="w-full bg-black hover:bg-black/90"
+          disabled={loading}
+        >
+          {loading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            "Preview Course"
+          )}
         </CustomButton>
       </form>
     </div>
@@ -284,4 +385,3 @@ function AddCourseContent() {
 }
 
 export default AddCourseContent
-

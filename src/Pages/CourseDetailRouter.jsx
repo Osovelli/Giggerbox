@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { useParams, useNavigate, Navigate } from "react-router-dom"
+import { useParams, useNavigate, Navigate, useLocation } from "react-router-dom"
 import { Loader2 } from "lucide-react"
 import useCourseStore from "@/store/courseStore"
 import toast from "react-hot-toast"
@@ -9,7 +9,8 @@ import toast from "react-hot-toast"
  * based on the course type (self-paced or one-on-one)
  */
 function CourseDetailRouter() {
-  const { id } = useParams()
+  const { slug } = useParams()
+  const id = useLocation().state?.id
   const navigate = useNavigate()
   const { getCourseById } = useCourseStore()
   const [courseType, setCourseType] = useState(null)
@@ -20,6 +21,7 @@ function CourseDetailRouter() {
     const fetchCourseType = async () => {
       try {
         setLoading(true)
+
         const response = await getCourseById(id)
 
         console.log('Course type fetched', response.type)
@@ -30,9 +32,9 @@ function CourseDetailRouter() {
           
           // Navigate to the appropriate route based on course type
           if (type === "self-paced") {
-            navigate(`/dashboard/course/${id}/self-paced`, { replace: true, state: { course: response } },)
+            navigate(`/dashboard/course/${slug}/self-paced`, { replace: true, state: { course: response } },)
           } else if (type === "one-on-one") {
-            navigate(`/dashboard/course/${id}/one-on-one`, { replace: true, state: { course: response } })
+            navigate(`/dashboard/course/${slug}/one-on-one`, { replace: true, state: { course: response } })
           } 
         } else {
           setError(true)
@@ -41,7 +43,7 @@ function CourseDetailRouter() {
       } catch (err) {
         console.error("Error fetching course:", err)
         setError(true)
-        toast.error("Failed to load course details")
+        //toast.error("Failed to load course details")
       } finally {
         setLoading(false)
       }

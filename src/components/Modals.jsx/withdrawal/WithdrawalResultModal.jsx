@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 function WithdrawalResultModal({ isOpen, onClose, success, amount, bankDetails }) {
   if (!bankDetails) return null
 
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md p-6">

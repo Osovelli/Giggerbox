@@ -4,40 +4,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import DashboardLayout from "@/components/Dashboard/DashboardLayout"
 import Table from "@/components/CustomTable"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useLocation } from "react-router-dom"
 import useGigStore from "@/store/gigStore"
 import useCourseStore from "@/store/courseStore"
-
-// Sample courses data (to be replaced with real data later)
-const sampleCourses = [
-  {
-    id: 1,
-    thumbnail: "/course-thumbnail.png",
-    name: "Google Data Analytics Course",
-    dateCreated: "22-01-2024",
-    status: "Ongoing",
-    type: "1-on-1 class with",
-    studentName: "[Student Name]",
-  },
-  {
-    id: 2,
-    thumbnail: "/course-thumbnail.png",
-    name: "Google Data Analytics Course",
-    dateCreated: "22-01-2024",
-    status: "Ongoing",
-    type: "Self Paced",
-    studentName: "N/A",
-  },
-  ...Array(6).fill(null).map((_, index) => ({
-    id: index + 3,
-    thumbnail: "/course-thumbnail.png",
-    name: "Google Data Analytics Course",
-    dateCreated: "22-01-2024",
-    status: "Completed",
-    type: "1-on-1 class with",
-    studentName: "[Student Name]",
-  })),
-]
 
 // Column definitions
 const gigColumns = [
@@ -52,7 +21,7 @@ const courseColumns = [
   { key: "dateCreated", label: "Date created" },
   { key: "status", label: "Status" },
   { key: "type", label: "Type" },
-  { key: "studentName", label: "Student Name" },
+  { key: "enrollments", label: "Enrollments" },
 ]
 
 const renderCustomCell = (key, value, row) => {
@@ -77,13 +46,13 @@ const renderCustomCell = (key, value, row) => {
     const statusValue = value?.toLowerCase()
     let statusClass = ""
     
-    if (statusValue === "ongoing" || statusValue === "active") {
+    if (statusValue === "ongoing" || statusValue === "active" || statusValue === "open") {
       statusClass = "bg-blue-50 text-blue-600"
-    } else if (statusValue === "completed") {
+    } else if (statusValue === "completed" || statusValue === "closed") {
       statusClass = "bg-green-50 text-green-600"
     } else if (statusValue === "cancelled") {
       statusClass = "bg-red-50 text-red-600"
-    } else if (statusValue === "pending") {
+    } else if (statusValue === "pending" || statusValue === "upcoming") {
       statusClass = "bg-yellow-50 text-yellow-600"
     } else {
       statusClass = "bg-gray-50 text-gray-600"
@@ -96,12 +65,17 @@ const renderCustomCell = (key, value, row) => {
     )
   }
 
-  if (key === "type" && row.studentName) {
+  if (key === "type") {
     return (
-      <div className="flex items-center gap-1">
-        <span>{value}</span>
-        <span className="text-primary">{row.studentName}</span>
-      </div>
+      <span className="capitalize">
+        {value?.replace("-", " ")}
+      </span>
+    )
+  }
+
+  if (key === "enrollments") {
+    return (
+      <span>{value || 0}</span>
     )
   }
 
@@ -135,37 +109,87 @@ const transformGigData = (gig) => {
   }
 }
 
+// Transform course data from API to table format
+const transformCourseData = (course) => {
+  const formatDate = (dateString) => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    }).replace(/\//g, '-')
+  }
+
+  // Determine status based on course data
+  const getStatus = () => {
+    if (course.status) return course.status
+    // You can add logic here to determine status based on dates, etc.
+    return "active"
+  }
+
+  return {
+    id: course._id,
+    name: course.title,
+    thumbnail: course.videoUrl || "/course-thumbnail.png",
+    dateCreated: formatDate(course.createdAt),
+    status: getStatus(),
+    type: course.type,
+    enrollments: course.enrollmentCount || 0,
+    price: course.price,
+    duration: course.duration,
+    lessons: course.lessons?.length || 0,
+  }
+}
+
 function MyCreations() {
   const { getMyGigs, myGigs, loading: gigsLoading } = useGigStore()
-  const { courses: myCourses, loading: coursesLoading } = useCourseStore()
-  const [activeView, setActiveView] = useState("gigs")
+  const { getCreatedCourses, createdCourses, loading: coursesLoading } = useCourseStore()
+  const navigate = useNavigate()
+  const location = useLocation()
+  
+  // Check if navigation came with state indicating which tab to show
+  const initialView = location.state?.view || "gigs"
+  
+  const [activeView, setActiveView] = useState(initialView)
   const [activeTab, setActiveTab] = useState("ongoing")
   const [searchTerm, setSearchTerm] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" })
-  const navigate = useNavigate()
 
+  console.log("check created courses: ", createdCourses)
+  console.log("check my gigs: ", myGigs)
+
+  // Fetch data based on active view
   useEffect(() => {
     if (activeView === "gigs") {
       getMyGigs()
+    } else if (activeView === "courses") {
+      getCreatedCourses()
     }
-    // Add fetch for courses when implemented
-    // if (activeView === "courses") {
-    //   fetchMyCourses()
-    // }
-  }, [activeView, getMyGigs])
+  }, [activeView, getMyGigs, getCreatedCourses])
+
+  // Set initial view from navigation state
+  useEffect(() => {
+    if (location.state?.view) {
+      setActiveView(location.state.view)
+      // Clear the state to avoid re-triggering
+      window.history.replaceState({}, document.title)
+    }
+  }, [location.state])
 
   // Transform and prepare data
   const preparedData = useMemo(() => {
+    console.log({'Check created courses': createdCourses, 'Check my gigs': myGigs})
     if (activeView === "gigs") {
-      // Transform API gigs data
       const gigsArray = Array.isArray(myGigs) ? myGigs : []
       return gigsArray.map(transformGigData)
     } else {
-      // Use sample courses for now (replace with real data later)
-      return sampleCourses
+      const coursesArray = Array.isArray(createdCourses) ? createdCourses : []
+      console.log({ coursesArray })
+      console.log({ createdCourses })
+      return coursesArray.map(transformCourseData)
     }
-  }, [activeView, myGigs])
+  }, [activeView, myGigs, createdCourses])
 
   const filteredData = useMemo(() => {
     return preparedData.filter((item) => {
@@ -179,13 +203,12 @@ function MyCreations() {
       const itemStatus = item.status?.toLowerCase()
 
       if (activeTab === "ongoing") {
-        matchesStatus = itemStatus === "ongoing" || itemStatus === "active"
+        matchesStatus = itemStatus === "ongoing" || itemStatus === "active" || itemStatus === "open"
       } else if (activeTab === "completed") {
-        matchesStatus = itemStatus === "completed"
+        matchesStatus = itemStatus === "completed" || itemStatus === "closed"
       } else if (activeTab === "upcoming") {
         matchesStatus = itemStatus === "upcoming" || itemStatus === "pending"
-      }
-      else if (activeTab === "cancelled") {
+      } else if (activeTab === "cancelled") {
         matchesStatus = itemStatus === "cancelled"
       }
 
@@ -216,13 +239,15 @@ function MyCreations() {
 
   const handleRowClick = (item) => {
     if (activeView === "gigs") {
-      navigate(`/gigs/${item.id}`)
+      navigate(`/dashboard/gig/${item.id}`)
     } else {
       navigate(`/dashboard/course/${item.id}`)
     }
   }
 
   const isLoading = activeView === "gigs" ? gigsLoading : coursesLoading
+
+  console.log({ preparedData, filteredData, sortedData })
 
   return (
     <>

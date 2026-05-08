@@ -7,7 +7,7 @@ import { Outlet } from "react-router-dom"
 import useUserStore from "@/store/userStore"
 
 function DashboardLayout({ children }) {
-  const { userOnboarding, loading, user, error } = useUserStore()
+  const { userOnboarding, getUserProfile, loading, user, error } = useUserStore()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
@@ -16,6 +16,18 @@ function DashboardLayout({ children }) {
       console.error("Failed to fetch user onboarding status:", err)
     })
   }, [userOnboarding])
+
+  useEffect(() => {
+    // Fetch user profile on mount
+    getUserProfile()
+  }, [getUserProfile])
+
+ /*  useEffect(() => {
+    if (!loading && user && !user?.isOnboarded) {
+      // Redirect to onboarding if not completed
+      window.location.href = "/complete-profile"
+    }
+  }, [loading, user]) */
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -30,11 +42,11 @@ function DashboardLayout({ children }) {
       </CustomButton>
 
       {/* Sidebar */}
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} data={user} />
 
       {/* Main Content */}
       <div className="lg:pl-72">
-        <Header />
+        <Header data={user} />
         <main className="p-6">
           <Outlet />
           {children}

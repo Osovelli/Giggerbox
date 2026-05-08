@@ -34,7 +34,7 @@ function CourseCard({ course }) {
   return (
     <div 
     className="flex flex-col md:flex-row bg-white shadow-sm flex-wrap gap-6 p-4 hover:bg-gray-50 rounded-lg transition-colors"
-    onClick={() => navigate(`/dashboard/course/${course._id}`)}
+    onClick={() => navigate(`/dashboard/course/${course.slug}`, { state: { id: course.id || course._id } })}
     >
       {/* Thumbnail */}
       <img

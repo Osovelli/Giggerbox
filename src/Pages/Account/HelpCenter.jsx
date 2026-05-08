@@ -1,15 +1,23 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { MessageSquare, HelpCircle, Mail, ChevronRight, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import CustomButton from "@/components/CustomButton"
+import useFAQStore from "@/store/FAQStore"
 
 function HelpCenter() {
+  const { fetchFAQs, Faqs } = useFAQStore()
+  // State to track the currently open section
   const [openSection, setOpenSection] = useState(null)
 
   const toggleSection = (section) => {
     setOpenSection(openSection === section ? null : section)
   }
+
+  useEffect(() => {
+    fetchFAQs()
+  }, [])
+
 
   // FAQ questions and answers
   const faqItems = [
@@ -66,7 +74,7 @@ function HelpCenter() {
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="">
         <h2 className="text-xl font-semibold">Help Center</h2>
         <p className="text-sm text-muted-foreground">Get support or contact us for help.</p>
       </div>

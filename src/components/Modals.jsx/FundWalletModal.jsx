@@ -119,9 +119,14 @@ function FundWalletModal({ isOpen, onClose }) {
         clearInterval(pollIntervalRef.current)
       }
 
+
       // Poll the popup window
       pollIntervalRef.current = setInterval(async () => {
         try {
+          /* paystackWindowRef.current.close()
+          paystackWindowRef.current = null */
+
+
           // Check if window is closed
           if (!paystackWindowRef.current || paystackWindowRef.current.closed) {
             clearInterval(pollIntervalRef.current)
@@ -293,9 +298,9 @@ function FundWalletModal({ isOpen, onClose }) {
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold">Fund Wallet</h2>
-              <button onClick={handleModalClose} className="text-gray-500 hover:text-gray-700">
+              {/* <button onClick={handleModalClose} className="text-gray-500 hover:text-gray-700">
                 <X className="h-5 w-5" />
-              </button>
+              </button> */}
             </div>
 
             <p className="text-gray-600 mb-6">

@@ -3,23 +3,35 @@ import { X, AlertCircle } from "lucide-react"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import WithdrawalResultModal from "./WithdrawalResultModal"
+import useWalletStore from "@/store/walletStore"
 
 function WithdrawalConfirmationModal({ isOpen, onClose, amount, bankDetails, fee }) {
+  const { verifyWithdrawal } = useWalletStore()
+  const [otp, setOtp] = useState("")
   const [isProcessing, setIsProcessing] = useState(false)
   const [isResultModalOpen, setIsResultModalOpen] = useState(false)
   const [withdrawalSuccess, setWithdrawalSuccess] = useState(false)
 
+  const handleOtpChange = (value) => {
+    setOtp(value)
+  }
+
   const handleConfirm = () => {
     setIsProcessing(true)
-
-    // Simulate API call with a timeout
-    setTimeout(() => {
-      // For demo purposes, let's assume 90% success rate
-      const success = Math.random() < 0.9
-      setWithdrawalSuccess(success)
-      setIsProcessing(false)
-      setIsResultModalOpen(true)
-    }, 2000)
+    console.log('Withdrawing', { amount, bankAccountId: bankDetails._id, otp })
+    verifyWithdrawal({ amount, bankAccountId: bankDetails._id, otp })
+      .then((response) => {
+        // Handle success
+        setWithdrawalSuccess(true)
+        setIsProcessing(false)
+        setIsResultModalOpen(true)
+      })
+      .catch((error) => {
+        // Handle error
+        setWithdrawalSuccess(false)
+        setIsProcessing(false)
+        setIsResultModalOpen(true)
+      })
   }
 
   const handleResultModalClose = () => {
@@ -78,6 +90,18 @@ function WithdrawalConfirmationModal({ isOpen, onClose, amount, bankDetails, fee
             <div className="flex items-center justify-center gap-2 text-sm text-red-500 mb-6">
               <AlertCircle className="h-4 w-4" />
               <p>You'll be charged N{fee.toLocaleString()} for this transaction</p>
+            </div>
+            <div>
+              <p className="text-center text-gray-600 text-sm mb-6">
+                Please input your withdrawal Otp to proceed with the withdrawal
+              </p>
+              <input
+                type="text"
+                value={otp}
+                onChange={(e) => handleOtpChange(e.target.value)}
+                placeholder="Enter OTP"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-6"
+              />
             </div>
 
             <Button className="w-full bg-black hover:bg-black/90" onClick={handleConfirm} disabled={isProcessing}>

@@ -33,7 +33,7 @@ const withdrawalMethods = [
 ]
 
 function WithdrawModal({ isOpen, onClose, walletBalance }) {
-  const { withdrawalOtpRequest, loading} = useWalletStore()
+  //const { withdrawalOtpRequest, loading} = useWalletStore()
   const [selectedMethod, setSelectedMethod] = useState(null)
   const [isBankTransferModalOpen, setIsBankTransferModalOpen] = useState(false)
   const [isPayPalModalOpen, setIsPayPalModalOpen] = useState(false)
@@ -45,11 +45,11 @@ function WithdrawModal({ isOpen, onClose, walletBalance }) {
     // Open the appropriate modal based on the selected method
     if (methodId === "bank") {
       setIsBankTransferModalOpen(true)
-      try {
+      /* try {
         withdrawalOtpRequest()
       } catch (error) {
         console.log(error)
-      }
+      } */
       onClose()
     } else if (methodId === "paypal") {
       setIsPayPalModalOpen(true)
